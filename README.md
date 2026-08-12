@@ -5,6 +5,8 @@ no dish required. Validated by detecting **Voyager 1** (carrier + both telemetry
 sidebands, SNR 245, drift −0.38 Hz/s) in Green Bank open data, then re-finding
 it **by structure alone** with our sideband-pair search.
 
+**Project site:** [felbs.software](https://felbs.software) · **Contact:** [E@felbs.software](mailto:E@felbs.software)
+
 ![Voyager 1 drifting](figures/voyager1_drift.png)
 
 *Real data, real drift: Voyager 1's X-band carrier (8421.39 MHz) from ~20 billion km
