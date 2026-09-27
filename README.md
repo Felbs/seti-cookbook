@@ -85,6 +85,7 @@ calibration for everything below.*
 ## Quickstart — hunt for aliens yourself
 ```bash
 pip install -r requirements.txt          # numpy, scipy, turbo_seti, blimpy, h5py...
+# Arch/Omarchy: make a venv first (python -m venv --system-site-packages .venv) - the system python has no pip
 python agent.py selftest                 # prove all 3 novel detectors work (no data)
 python cookbook.py selftest              # prove all 6 recipes work (no data)
 python cookbook.py bench                 # score every recipe, rewrite the leaderboard
