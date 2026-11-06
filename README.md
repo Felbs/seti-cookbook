@@ -49,6 +49,17 @@ calibration for everything below.*
   signals; on Voyager's real carrier, ~3 % pointing/scintillation jitter makes
   it inconclusive, and the tool says so instead of guessing.
 
+**The searches with pre-registered thresholds and measured sensitivity**
+- `hi_starframe.py` — a hydrogen-line beacon tuned in Barnard's Star's own
+  frame lands at a predictable frequency (1421.052 MHz in March 2016). Reads
+  just that 2.9 MHz from the public Green Bank cadence over HTTP. **Null; rules
+  out a steady beacon above ~5 GW** aimed at us during those scans
+  ([HI_STARFRAME_RESULT.md](HI_STARFRAME_RESULT.md)).
+- `laser_lines.py` — optical SETI on 199 Sloan (SDSS DR17) star spectra,
+  exposure by exposure. **3 survivors, 2 inside Earth's water-vapour bands**;
+  lines ≳ 12×10⁻¹⁷ erg/s/cm² are caught ~89 % of the time where the method can
+  look ([LASER_LINES_RESULT.md](LASER_LINES_RESULT.md)).
+
 **The novel detectors** (the ones turboSETI is structurally blind to)
 - `cyclo.py` — **the frontier: a detector for signals turboSETI cannot see.**
   A drift search only finds loud narrowband *carriers* — radio like 1950s Earth.

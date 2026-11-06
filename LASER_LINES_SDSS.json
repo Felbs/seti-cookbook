@@ -1,0 +1,85 @@
+{
+ "prereg": {
+  "z_enter": 7.0,
+  "z_exp": 1.5,
+  "exp_frac": 0.8,
+  "chi2_max": 4.0,
+  "width_max": 1.6,
+  "recur_frac": 0.03,
+  "recur_px": 2,
+  "cont_win": 61
+ },
+ "n_stars": 200,
+ "searchable_fraction": 0.5972858526722227,
+ "n_peaks": 431,
+ "veto_counts": {
+  "star model does not fit here": 369,
+  "known line": 46,
+  "at a stellar absorption line": 273,
+  "flux not steady": 15,
+  "resolved": 315,
+  "not in every exposure": 36,
+  "sky line here": 35,
+  "recurs in 11 stars": 11,
+  "recurs in 7 stars": 7
+ },
+ "survivors": [
+  {
+   "lam": 7181.2490234375,
+   "z": 19.58102313465612,
+   "amp": 15.578925223725275,
+   "vetoes": [],
+   "model_chi2": 2.3805418579138977,
+   "model_depth": 0.9970401893969791,
+   "exp_frac": 1.0,
+   "n_exp": 4,
+   "chi2": 2.2097205835763587,
+   "star": "spec-0271-51883-0440",
+   "recur": 1,
+   "telluric_band": true
+  },
+  {
+   "lam": 8113.34521484375,
+   "z": 8.772308668312796,
+   "amp": 12.352028393760248,
+   "vetoes": [],
+   "model_chi2": 1.0190326146767679,
+   "model_depth": 0.9969436332813689,
+   "exp_frac": 1.0,
+   "n_exp": 3,
+   "chi2": 2.296357411037974,
+   "star": "spec-0278-51900-0030",
+   "recur": 1,
+   "telluric_band": true
+  },
+  {
+   "lam": 8090.958984375,
+   "z": 8.802710501157813,
+   "amp": 7.983517206709723,
+   "vetoes": [],
+   "model_chi2": 1.2931521683506055,
+   "model_depth": 0.994663305003996,
+   "exp_frac": 1.0,
+   "n_exp": 4,
+   "chi2": 0.24658612738671162,
+   "star": "spec-0296-51984-0232",
+   "recur": 1,
+   "telluric_band": false
+  }
+ ],
+ "completeness": {
+  "5.0": 0.014492753623188406,
+  "8.0": 0.6461538461538462,
+  "12.0": 0.8955223880597015,
+  "15.0": 0.875,
+  "20.0": 0.8961038961038961
+ },
+ "flux_1e17": {
+  "5.0": 5.202324166564887,
+  "8.0": 7.526888599250637,
+  "12.0": 11.651880000978682,
+  "15.0": 13.033421502735214,
+  "20.0": 17.230094269186235
+ },
+ "snr90": null
+}
