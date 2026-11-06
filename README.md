@@ -35,6 +35,20 @@ calibration for everything below.*
   Validated: given three anonymous hits, it autonomously flagged Voyager as
   `TRIPLET ... carrier + data sidebands: a TRANSMITTER`.
 
+**The yardsticks** — *so a null result means something*
+- `drift_audit.py` — plants signals with known drifts into a real file and
+  checks the search reports them right. Fine-res Voyager: 7/9 correct.
+  Mid-res star files: 1/9 — every signal comes back at ±5.2 Hz/s.
+- `earth_term.py` — predicts the drift Earth's spin and orbit put on any sky
+  signal. Gate: Voyager 1's measured −0.3776 Hz/s, predicted −0.3782 (0.2 %).
+- `reach.py` — how powerful an alien transmitter must be for an instrument to
+  hear it. Gate: reproduces Breakthrough Listen's published GBT sensitivity
+  (Enriquez et al. 2017: 17 Jy, 5.2×10¹² W at 50 pc). GBT hears an
+  Arecibo-class radar to ~224 ly; a used 3 m backyard dish to ~5–9 ly.
+- `coherence.py` — steady machine or noise-like maser? Passes on synthetic
+  signals; on Voyager's real carrier, ~3 % pointing/scintillation jitter makes
+  it inconclusive, and the tool says so instead of guessing.
+
 **The novel detectors** (the ones turboSETI is structurally blind to)
 - `cyclo.py` — **the frontier: a detector for signals turboSETI cannot see.**
   A drift search only finds loud narrowband *carriers* — radio like 1950s Earth.
