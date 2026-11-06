@@ -21,7 +21,7 @@ import recipe_api as R                                            # noqa: E402
 NAME = "narrowband_drift"
 DESCRIPTION = ("brute-force de-Doppler: shift-and-sum over trial drift rates, "
                "then peak-find. The reference technosignature recipe.")
-AUTHOR = "setiTuna"
+AUTHOR = "seti-cookbook"
 VERSION = "1.0"
 INPUT = "spectrogram"
 TAGS = ["technosignature", "narrowband", "drift", "reference"]

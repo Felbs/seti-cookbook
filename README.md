@@ -1,7 +1,9 @@
-# setiTuna 🛸 — a backyard SETI rig on Breakthrough Listen open data
+# seti-cookbook 🛸 — open technosignatures for alien hunters
 
-Hunt for technosignatures in public data from the world's biggest telescopes —
-no dish required. Validated by detecting **Voyager 1** (carrier + both telemetry
+Search public data from the world's biggest telescopes for signs of technology,
+with detectors anyone can write — no dish required. *(Formerly **setiTuna**; the
+old GitHub address redirects here, and the old `SETITUNA_*` environment
+variables still work.)* Validated by detecting **Voyager 1** (carrier + both telemetry
 sidebands, SNR 245, drift −0.38 Hz/s) in Green Bank open data, then re-finding
 it **by structure alone** with our sideband-pair search.
 
@@ -105,7 +107,7 @@ people's data, it is enormous, and it is already free. `data/` is gitignored.
 Everything below downloads from the public Breakthrough Listen archive into that
 folder, and every script here expects to find it there.
 
-**Where it goes:** `setiTuna/data/`. Create it if it does not exist; the fetchers
+**Where it goes:** `seti-cookbook/data/`. Create it if it does not exist; the fetchers
 create it for you. Nothing else needs configuring — the tools glob that folder.
 
 **Step by step, from nothing to a real search:**
@@ -141,7 +143,7 @@ python cadence_search.py --target GJ699 --f-start 1400 --f-stop 1500
 python search_ledger.py coverage
 ```
 
-**Pick a target:** `python -c "import tools.setituna_mcp"` is not needed — just
+**Pick a target:** `python -c "import tools.seti_cookbook_mcp"` is not needed — just
 query the archive by name. Good nearby ones: `GJ699` (Barnard's Star, 6 ly),
 `GJ411`, `GJ15A`, `GJ273` (Luyten's Star), `GJ581`. Any BL target name works.
 
@@ -235,9 +237,9 @@ Data files are not in the repo (`data/` is gitignored) — fetch from the
 `fetch_public_data.py`.
 
 ## Hardware and GPU
-None required. setiTuna analyses archive data — no telescope, no SDR, no dish.
+None required. seti-cookbook analyses archive data — no telescope, no SDR, no dish.
 Any laptop runs everything here; the selftests and every teaching figure need no
-download at all. GPU acceleration is **optional**: set `SETITUNA_GPU=1` and the
+download at all. GPU acceleration is **optional**: set `SETI_COOKBOOK_GPU=1` and the
 dedispersion/folding loops use `cupy` if it is installed, and the identical numpy
 path runs otherwise. Nothing in this repo ever requires CUDA.
 
@@ -246,7 +248,7 @@ topocentric velocities and says so, instead of LSR-corrected ones.
 
 ## Optional: the MCP companion (off by default)
 
-`tools/setituna_mcp.py` exposes setiTuna's verbs to an MCP client (Claude Code,
+`tools/seti_cookbook_mcp.py` exposes seti-cookbook's verbs to an MCP client (Claude Code,
 Claude Desktop, a local LLM) as 16 typed tools, so a language model can drive a
 search. **It is entirely optional and off by default** — nothing else in the repo
 imports it, and every capability below is available from the command line without
@@ -264,7 +266,7 @@ we have no preference: Claude Code or Claude Desktop, other desktop assistants
 that speak MCP, editor extensions, or a **fully local model** you run yourself
 (llama.cpp / Ollama front-ends with MCP support, LM Studio, and similar). The
 server is a plain stdio process — whatever can launch a subprocess and speak MCP
-can drive it. Nothing about setiTuna is tied to a particular provider, and
+can drive it. Nothing about seti-cookbook is tied to a particular provider, and
 `targets_available` is the only tool that can reach the network at all.
 
 Point your client at it by copying `.mcp.json.example` to wherever your client
@@ -272,9 +274,9 @@ keeps its server list (for Claude Code, `.mcp.json` in the project root), then
 edit the interpreter path so it points at a python that has `h5py`/`numpy`:
 
 ```jsonc
-{ "mcpServers": { "setituna": {
+{ "mcpServers": { "seti-cookbook": {
     "command": "C:/path/to/python.exe",          // needs h5py + numpy
-    "args": ["C:/path/to/setiTuna/tools/setituna_mcp.py"] } } }
+    "args": ["C:/path/to/seti-cookbook/tools/seti_cookbook_mcp.py"] } } }
 ```
 
 Then just *ask*. Things that work today, in plain language:
@@ -325,14 +327,14 @@ has a standing open bounty — nothing catches the test-set pulsar yet.
   numbers) goes to that provider, exactly as if you had pasted it into a chat.
   Point it at a local model if that matters to you.
 - Filesystem access is **sandboxed to this repo**; paths outside are refused
-  unless you set `SETITUNA_MCP_ALLOW_ANY_PATH=1`.
-- **No radio hardware is touched by anything here.** setiTuna reads archive files.
+  unless you set `SETI_COOKBOOK_MCP_ALLOW_ANY_PATH=1`.
+- **No radio hardware is touched by anything here.** seti-cookbook reads archive files.
 
 Enable it:
 ```bash
 pip install fastmcp
 cp .mcp.json.example .mcp.json      # Claude Code reads .mcp.json at the repo root
-python tools/setituna_mcp.py        # or run it standalone
+python tools/seti_cookbook_mcp.py        # or run it standalone
 ```
 Use the interpreter that has this repo's requirements (`blimpy`, `h5py`,
 `hdf5plugin`) installed — often a conda env rather than bare `python`.

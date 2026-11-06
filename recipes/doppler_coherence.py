@@ -161,7 +161,7 @@ def _array_mod(use_gpu):
 
     Honest fallback, never fatal — the house rule is that a GPU path is always
     optional and the CPU path is always correct. seti_io.xp() already implements
-    exactly this policy (env SETITUNA_GPU=1), so defer to it rather than growing
+    exactly this policy (env SETI_COOKBOOK_GPU=1), so defer to it rather than growing
     a second, subtly-different switch.
     """
     if not use_gpu:

@@ -73,7 +73,7 @@ def main():
         except Exception:
             a.gpu = False
     if a.gpu:
-        os.environ["SETITUNA_GPU"] = "1"
+        os.environ["SETI_COOKBOOK_GPU"] = "1"
 
     import seti_io
     import recipe_api as R

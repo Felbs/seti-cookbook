@@ -39,7 +39,7 @@ from seti_io import DM_CONST                                      # noqa: E402
 NAME = "dispersion_sweep"
 DESCRIPTION = ("dedispersion search for a broadband millisecond burst: FRBs, "
                "pulsar single pulses, and any engineered wideband impulse")
-AUTHOR = "setiTuna"
+AUTHOR = "seti-cookbook"
 VERSION = "1.0"
 INPUT = "spectrogram"
 TAGS = ["natural", "frb", "pulsar", "dispersion", "transient"]

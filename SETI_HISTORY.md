@@ -60,7 +60,7 @@ Either way the founding lesson stands: **your first candidate is your equipment 
 your neighbours.** *(A sequel, Ozma II, ran 1972–76 on Green Bank's 300-foot dish
 over 670 nearby stars. Also nothing.)*
 
-*(setiTuna re-observed Epsilon Eridani with modern Breakthrough Listen data
+*(seti-cookbook re-observed Epsilon Eridani with modern Breakthrough Listen data
 64 years later — `EPSILON_ERIDANI_RESULT.md`. Nothing.)*
 
 ### The Wow! signal (15 August 1977) — the one that is still open
@@ -205,7 +205,7 @@ Way, and 100 nearby galaxies, using the **Green Bank Telescope**, **Parkes**, an
 The part that matters for this repo: **the data is open.** Petabytes of raw and
 reduced spectrograms from the world's best single dishes, free to download, which
 is why a hobbyist with a laptop can do real SETI at all (Lebofsky et al. 2019;
-Price et al. 2020). Everything setiTuna does runs on it.
+Price et al. 2020). Everything seti-cookbook does runs on it.
 
 ### The Allen Telescope Array
 
@@ -632,7 +632,7 @@ above ~10 GHz. *(⚠️ Sources differ on whether the upper bound is quoted as 1
 
 This is the quantitative heart of the whole technosignature argument, so it is
 worth doing with numbers rather than assertion. A SETI search works in **~3 Hz**
-channels (Breakthrough Listen's fine-frequency products; setiTuna's Voyager file
+channels (Breakthrough Listen's fine-frequency products; seti-cookbook's Voyager file
 is 2.79 Hz). How close does nature come?
 
 | natural emitter | narrowest observed feature | in Hz, at its own frequency |
@@ -690,7 +690,7 @@ rotation gives different line-of-sight velocities in different directions. Often
 multiple velocity components (one per spiral arm along the line of sight).
 
 **And it is in our data.** Here is the 21 cm line in the same Breakthrough Listen
-Green Bank files setiTuna used to hunt for technosignatures around nearby stars:
+Green Bank files seti-cookbook used to hunt for technosignatures around nearby stars:
 
 ![HI line in BL SETI data](figures/hi_survey.png)
 
@@ -1256,10 +1256,10 @@ already pointed, and the data is free.
 | what you want to see | where to get it |
 |---|---|
 | Real SETI observations at ~3 Hz resolution; the HI line; RFI; a confirmed technosignature | **Breakthrough Listen open data.** Use the searchable portal at <https://breakthroughinitiatives.org/opendatasearch> — filter by project, file type (baseband / filterbank / HDF5), RA/Dec, MJD, centre frequency or target name. *(The older `seti.berkeley.edu/opendata` link works in a browser but is an unresolvable redirect loop for scripted fetching.)* Also `star_sweep.py`, `fetch_public_data.py voyager` |
-| **A known, human-made narrowband carrier** to test any pipeline against | **Voyager 1** is Breakthrough Listen's own canonical test source, with a public tutorial notebook at `github.com/UCBerkeleySETI/breakthrough` → `GBT/voyager/voyager.ipynb`. A real transmitter at a known drift rate, ~20 billion km away when the calibration file was recorded (2016-09-19); it is near 25 billion km today and still receding about 3.6 AU a year. It is what setiTuna calibrates on |
+| **A known, human-made narrowband carrier** to test any pipeline against | **Voyager 1** is Breakthrough Listen's own canonical test source, with a public tutorial notebook at `github.com/UCBerkeleySETI/breakthrough` → `GBT/voyager/voyager.ipynb`. A real transmitter at a known drift rate, ~20 billion km away when the calibration file was recorded (2016-09-19); it is near 25 billion km today and still receding about 3.6 AU a year. It is what seti-cookbook calibrates on |
 | **Solar radio bursts** in a real waterfall — the best free dispersive/drifting dynamic spectra anywhere | **e-CALLISTO**: <https://www.e-callisto.org/> (with a "Burst of the Day" on the front page), archive at <https://soleil.i4ds.ch/solarradio/>, and quicklook images by year and calendar day at `soleil.i4ds.ch/solarradio/callistoQuicklooks/`. FITS, a few MB each |
 | **FRB dynamic spectra** | **CHIME/FRB Catalog 1** (536 bursts, including 62 bursts from 18 repeaters) and **Catalog 2** (arXiv:2601.09399 — **4539 bursts from 3641 sources**, each with a 400–800 MHz total-intensity dynamic spectrum at 0.983 ms). ⚠️ The CHIME public site is currently displaying a *"temporarily unavailable while we rebuild"* notice; the data lives in DOI'd CANFAR archives and the Python tools at <https://chime-frb-open-data.github.io/> (which includes a "Make a Waterfall Plot" tutorial) |
-| **⭐ Six hours of real GBT filterbank containing 21 labelled FRB bursts** | Breakthrough Listen's **FRB 121102 "frb-machine" release**: <https://seti.berkeley.edu/frb-machine/technical.html> — SIGPROC filterbank, Stokes I, **blimpy-readable**, 10 scans of ~76 GB, 360 kHz channels, shipped with a CSV of every detected burst plus a trained classifier. This is the best real-data target in this whole table for setiTuna, because our own loader reads it directly. *(A separate release of 23 short PSRFITS burst snapshots is at `seti.berkeley.edu/frb121102/technical.html`.)* |
+| **⭐ Six hours of real GBT filterbank containing 21 labelled FRB bursts** | Breakthrough Listen's **FRB 121102 "frb-machine" release**: <https://seti.berkeley.edu/frb-machine/technical.html> — SIGPROC filterbank, Stokes I, **blimpy-readable**, 10 scans of ~76 GB, 360 kHz channels, shipped with a CSV of every detected burst plus a trained classifier. This is the best real-data target in this whole table for seti-cookbook, because our own loader reads it directly. *(A separate release of 23 short PSRFITS burst snapshots is at `seti.berkeley.edu/frb121102/technical.html`.)* |
 | **Pulsar profiles** | the **EPN Database of Pulsar Profiles** at <https://psrweb.jb.man.ac.uk/epndb/> (PSRFITS, text and original formats — note the old `epta.eu.org` address redirects here); ephemerides and fluxes from **ATNF psrcat**, <https://www.atnf.csiro.au/research/pulsar/psrcat/> |
 | **Jupiter** | the **Radio JOVE archive**, <http://radiojove.net/archive.html> — two decades of citizen observations of the Sun, Jupiter, the galaxy and the ionosphere; downloads need no account |
 | **Remote-controlled real telescopes** | **SALSA-Onsala** (<https://salsa.oso.chalmers.se/>), a 2.3 m dish at 21 cm you can drive over the internet for free, with three prepared activities: galactic HI structure, satellite tracking, and measuring the beam pattern on the Sun |

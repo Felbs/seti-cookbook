@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Frequency-comb detector, spectrogram edition - one of setiTuna's own novel
+"""Frequency-comb detector, spectrogram edition - one of seti-cookbook's own novel
 detectors (see NOVEL_DETECTORS.md #2 and COMB_RESULT.md; comb.py is the IQ
 version validated at 3/3 combs, 0/3 false fires on randomly-spaced tones).
 
@@ -26,7 +26,7 @@ import recipe_api as R                                            # noqa: E402
 NAME = "comb_uniformity"
 DESCRIPTION = ("cepstral test for a UNIFORMLY Hz-spaced tone comb - an "
                "engineered frequency reference nature does not fake")
-AUTHOR = "setiTuna"
+AUTHOR = "seti-cookbook"
 VERSION = "1.0"
 INPUT = "spectrogram"
 TAGS = ["technosignature", "novel", "comb", "engineered-uniformity"]
@@ -80,7 +80,7 @@ def run(spec, params=None):
                         n_teeth=len(teeth),
                         gap_scatter_fraction=round(uni, 4),
                         tooth_freqs_mhz=[round(float(f[i]), 6) for i in teeth[:24]],
-                        reference="setiTuna comb.py / COMB_RESULT.md "
+                        reference="seti-cookbook comb.py / COMB_RESULT.md "
                                   "(NOVEL_DETECTORS.md #2)"))]
 
 

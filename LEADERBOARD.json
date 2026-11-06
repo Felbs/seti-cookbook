@@ -3,7 +3,7 @@
   {
    "recipe": "narrowband_drift",
    "version": "1.0",
-   "author": "setiTuna",
+   "author": "seti-cookbook",
    "caught": [
     "drift_loud",
     "drift_faint",
@@ -16,7 +16,7 @@
     "hi_line"
    ],
    "false_alarms": [],
-   "runtime_s": 0.376,
+   "runtime_s": 0.978,
    "errors": [],
    "n_caught": 3,
    "n_fa": 0,
@@ -25,7 +25,7 @@
   {
    "recipe": "spread_flatness",
    "version": "1.0",
-   "author": "setiTuna",
+   "author": "seti-cookbook",
    "caught": [
     "spread",
     "hi_line"
@@ -47,7 +47,7 @@
   {
    "recipe": "hi_line_natural",
    "version": "1.0",
-   "author": "setiTuna",
+   "author": "seti-cookbook",
    "caught": [
     "hi_line"
    ],
@@ -60,7 +60,7 @@
     "pulsar_B0329"
    ],
    "false_alarms": [],
-   "runtime_s": 0.001,
+   "runtime_s": 0.004,
    "errors": [],
    "n_caught": 1,
    "n_fa": 0,
@@ -69,7 +69,7 @@
   {
    "recipe": "comb_uniformity",
    "version": "1.0",
-   "author": "setiTuna",
+   "author": "seti-cookbook",
    "caught": [
     "comb"
    ],
@@ -82,7 +82,7 @@
     "hi_line"
    ],
    "false_alarms": [],
-   "runtime_s": 0.015,
+   "runtime_s": 0.017,
    "errors": [],
    "n_caught": 1,
    "n_fa": 0,
@@ -91,7 +91,7 @@
   {
    "recipe": "dispersion_sweep",
    "version": "1.0",
-   "author": "setiTuna",
+   "author": "seti-cookbook",
    "caught": [
     "frb_dm560"
    ],
@@ -104,7 +104,7 @@
     "hi_line"
    ],
    "false_alarms": [],
-   "runtime_s": 0.7,
+   "runtime_s": 0.845,
    "errors": [],
    "n_caught": 1,
    "n_fa": 0,
@@ -126,7 +126,7 @@
     "hi_line"
    ],
    "false_alarms": [],
-   "runtime_s": 0.787,
+   "runtime_s": 1.388,
    "errors": [],
    "n_caught": 1,
    "n_fa": 0,
@@ -135,7 +135,7 @@
   {
    "recipe": "pi_ratio",
    "version": "1.0",
-   "author": "setiTuna (deliberately playful, genuinely Doppler-invariant)",
+   "author": "seti-cookbook (deliberately playful, genuinely Doppler-invariant)",
    "caught": [],
    "missed": [
     "drift_loud",

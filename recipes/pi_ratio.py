@@ -35,7 +35,7 @@ import recipe_api as R                                            # noqa: E402
 NAME = "pi_ratio"
 DESCRIPTION = ("tone PAIRS whose frequency ratio is pi/e/phi/sqrt2 - the one "
                "property of a transmitted frequency that Doppler cannot change")
-AUTHOR = "setiTuna (deliberately playful, genuinely Doppler-invariant)"
+AUTHOR = "seti-cookbook (deliberately playful, genuinely Doppler-invariant)"
 VERSION = "1.0"
 INPUT = "spectrogram"
 TAGS = ["technosignature", "playful", "doppler-invariant", "long-shot"]

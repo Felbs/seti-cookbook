@@ -163,7 +163,7 @@ def main():
     else:
         c = coverage()
         print("=" * 66)
-        print("  setiTuna search coverage — what we have actually looked at")
+        print("  seti-cookbook search coverage — what we have actually looked at")
         print("=" * 66)
         print(f"  runs                  {c['runs']}")
         print(f"  distinct files        {c['distinct_files']}")

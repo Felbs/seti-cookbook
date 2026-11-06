@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""cookbook.py - run, score and compare setiTuna RECIPES.
+"""cookbook.py - run, score and compare seti-cookbook RECIPES.
 
 A recipe is one small python file in recipes/ that says "here is a new way a
 civilization might be detectable, and here is how to look for it" (the contract
@@ -118,7 +118,7 @@ def cmd_run(args):
 
 def cmd_bench(args):
     print("=" * 70)
-    print("setiTuna recipe benchmark - same scenes, same truth, for everyone")
+    print("seti-cookbook recipe benchmark - same scenes, same truth, for everyone")
     print("=" * 70)
     rows, scenes = R.bench()
     p = R.write_leaderboard(rows, scenes)

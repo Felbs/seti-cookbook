@@ -1,4 +1,4 @@
-# setiTuna — novel search ideas (2026-07-25, user + Fable brainstorm)
+# seti-cookbook — novel search ideas (2026-07-25, user + Fable brainstorm)
 1. SIDEBAND-PAIR SEARCH (the star idea): turboSETI finds isolated lines; nobody
    post-searches the hit list for SYMMETRIC PAIRS/TRIPLETS sharing a common
    drift rate (f0 +/- delta, same drift) = a MODULATED transmitter — exactly

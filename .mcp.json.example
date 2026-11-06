@@ -1,22 +1,22 @@
 {
   "_comment": [
-    "setiTuna MCP companion - OPTIONAL, OFF BY DEFAULT.",
+    "seti-cookbook MCP companion - OPTIONAL, OFF BY DEFAULT.",
     "This file is deliberately named .mcp.json.example so that nothing starts",
     "automatically. To enable it: `cp .mcp.json.example .mcp.json` (Claude Code",
-    "picks up .mcp.json at the repo root), or paste the setituna block into your",
+    "picks up .mcp.json at the repo root), or paste the seti-cookbook block into your",
     "own client config. Requires `pip install fastmcp`.",
     "It is a LOCAL stdio process. It opens no port and sends nothing anywhere",
     "itself; see the MCP section of the README for the full privacy statement.",
-    "SETITUNA_MCP_ALLOW_ANY_PATH=1 lifts the repo-only filesystem sandbox.",
+    "SETI_COOKBOOK_MCP_ALLOW_ANY_PATH=1 lifts the repo-only filesystem sandbox.",
     "Use the interpreter that has this repo's requirements installed (blimpy /",
     "h5py / hdf5plugin), which is often a conda env rather than bare `python`."
   ],
   "mcpServers": {
-    "setituna": {
+    "seti-cookbook": {
       "command": "python",
-      "args": ["tools/setituna_mcp.py"],
+      "args": ["tools/seti_cookbook_mcp.py"],
       "env": {
-        "SETITUNA_GPU": "0"
+        "SETI_COOKBOOK_GPU": "0"
       }
     }
   }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Spread-spectrum / "structured noise" detector - setiTuna's own novel line of
+"""Spread-spectrum / "structured noise" detector - seti-cookbook's own novel line of
 attack (NOVEL_DETECTORS.md #1 and #4; cyclo.py + entropy.py are the IQ-domain
 versions, validated at -10 dB SNR and on 7/7 real digital captures).
 
@@ -32,7 +32,7 @@ import recipe_api as R                                            # noqa: E402
 NAME = "spread_flatness"
 DESCRIPTION = ("wide, spectrally FLAT excess power - the spectrogram signature "
                "of a spread-spectrum/noise-like transmitter turboSETI cannot see")
-AUTHOR = "setiTuna"
+AUTHOR = "seti-cookbook"
 VERSION = "1.0"
 INPUT = "spectrogram"
 TAGS = ["technosignature", "novel", "spread-spectrum", "entropy"]
@@ -92,7 +92,7 @@ def run(spec, params=None):
                         excess_over_baseline=round(float(sp[i:j].mean() / med), 3),
                         ambiguity="also matches broadband RFI, a gain step, or a "
                                   "continuum source - needs ON/OFF cadence",
-                        reference="setiTuna cyclo.py/entropy.py "
+                        reference="seti-cookbook cyclo.py/entropy.py "
                                   "(CYCLO_RESULT.md, ENTROPY_RESULT.md)")))
         i = j
     return out

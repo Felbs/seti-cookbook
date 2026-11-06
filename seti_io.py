@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""seti_io.py - one loader for everything setiTuna looks at.
+"""seti_io.py - one loader for everything seti-cookbook looks at.
 
 Every detector, recipe, waterfall and MCP tool in this repo speaks ONE data
 type: a `Spectrogram` - a (ntime, nchan) block of power with frequency
@@ -15,7 +15,7 @@ Loaders:
                          teaching figures need no downloads at all
   open_any(path, ...)     dispatch on extension
 
-GPU is OPTIONAL everywhere (see gpu_optional_law): set SETITUNA_GPU=1 and the
+GPU is OPTIONAL everywhere (see gpu_optional_law): set SETI_COOKBOOK_GPU=1 and the
 heavy loops (dedispersion, folding) run on cupy if it is installed; with no GPU,
 or no cupy, or the variable unset, the identical numpy path runs. Nothing in
 this repo ever REQUIRES a GPU.
@@ -43,7 +43,7 @@ DM_CONST = 4.148808e3          # => t_ms = 4.148808 * DM * nu_GHz^-2
 def xp(force_cpu=False):
     """Return the array module to compute with: cupy if the user asked for GPU
     and it is actually importable, else numpy. Honest fallback, never fatal."""
-    if force_cpu or os.environ.get("SETITUNA_GPU", "0") not in ("1", "true", "yes"):
+    if force_cpu or os.environ.get("SETI_COOKBOOK_GPU", os.environ.get("SETITUNA_GPU", "0")) not in ("1", "true", "yes"):
         return np
     try:
         import cupy

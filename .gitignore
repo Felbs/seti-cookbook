@@ -11,3 +11,5 @@ __pycache__/
 cadence_fetch*.log
 cadence_run.log
 search_*.log
+
+.venv/

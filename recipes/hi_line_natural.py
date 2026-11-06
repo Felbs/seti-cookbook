@@ -34,7 +34,7 @@ from seti_io import HI_MHZ, OH_MHZ, C_KMS                         # noqa: E402
 NAME = "hi_line_natural"
 DESCRIPTION = ("finds the galaxy's own 21 cm hydrogen and the OH/CH3OH/H2O maser "
                "lines, with velocities - so you can tell nature from a beacon")
-AUTHOR = "setiTuna"
+AUTHOR = "seti-cookbook"
 VERSION = "1.0"
 INPUT = "spectrogram"
 TAGS = ["natural", "spectral-line", "hydrogen", "maser", "veto"]

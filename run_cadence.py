@@ -139,7 +139,7 @@ def main():
         except Exception:
             a.gpu = False
     if a.gpu:
-        os.environ["SETITUNA_GPU"] = "1"
+        os.environ["SETI_COOKBOOK_GPU"] = "1"
     nw = 1 if a.gpu else (a.workers or _auto_workers(files))
     total_gb = sum(Path(f).stat().st_size for f in files) / 1e9
     print(f"{a.target}: {len(files)} scan(s), {total_gb:.1f} GB, "

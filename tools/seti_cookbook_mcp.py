@@ -1,6 +1,6 @@
-"""setituna_mcp.py - setiTuna as an MCP server. OPTIONAL COMPANION, OFF BY DEFAULT.
+"""seti_cookbook_mcp.py - seti-cookbook as an MCP server. OPTIONAL COMPANION, OFF BY DEFAULT.
 
-Exposes setiTuna's real verbs to any MCP client (Claude Code, Claude Desktop, a
+Exposes seti-cookbook's real verbs to any MCP client (Claude Code, Claude Desktop, a
 local LLM) as typed tools, so a language model can drive a SETI search: list the
 data you have, run detectors and recipes on it, read the candidate list with its
 verdicts, render a waterfall, and score recipes on the shared benchmark.
@@ -12,7 +12,7 @@ data as everyone else, closes the hypothesis->experiment->conclusion loop that t
 rest of the repo does by hand. That is what this is for.
 
 PRIVACY / SCOPE - read this before you enable it:
-  * Nothing here is required. setiTuna is a complete command-line tool without
+  * Nothing here is required. seti-cookbook is a complete command-line tool without
     it; this file is a separate optional companion and no other file imports it.
   * It is a LOCAL process speaking MCP over stdio to a client on the same
     machine. It opens no network port and phones nothing home.
@@ -24,12 +24,12 @@ PRIVACY / SCOPE - read this before you enable it:
     numbers) goes to that provider, exactly as if you had pasted it into a chat.
     Point it at a local model if that matters to you.
   * Filesystem access is confined to the repo by default: paths are resolved
-    under the setiTuna directory and anything outside is refused unless you set
-    SETITUNA_MCP_ALLOW_ANY_PATH=1.
-  * No telescope, no SDR, no radio hardware is touched by any tool here. setiTuna
+    under the seti-cookbook directory and anything outside is refused unless you set
+    SETI_COOKBOOK_MCP_ALLOW_ANY_PATH=1.
+  * No telescope, no SDR, no radio hardware is touched by any tool here. seti-cookbook
     reads archive files.
 
-Run standalone:      python tools/setituna_mcp.py
+Run standalone:      python tools/seti_cookbook_mcp.py
 Claude Code config:  see .mcp.json.example at the repo root
 Requires:            pip install fastmcp   (plus the repo's own requirements)
 """
@@ -48,9 +48,9 @@ from fastmcp import FastMCP                                       # noqa: E402
 import recipe_api as R                                            # noqa: E402
 import seti_io                                                    # noqa: E402
 
-mcp = FastMCP("setituna")
+mcp = FastMCP("seti-cookbook")
 
-ALLOW_ANY_PATH = os.environ.get("SETITUNA_MCP_ALLOW_ANY_PATH", "0") in ("1", "true")
+ALLOW_ANY_PATH = os.environ.get("SETI_COOKBOOK_MCP_ALLOW_ANY_PATH", os.environ.get("SETITUNA_MCP_ALLOW_ANY_PATH", "0")) in ("1", "true")
 
 
 def _safe(path):
@@ -68,8 +68,8 @@ def _safe(path):
             p.relative_to(REPO)
         except ValueError:
             raise ValueError(
-                f"refusing to read outside the setiTuna repo ({REPO}). "
-                "Set SETITUNA_MCP_ALLOW_ANY_PATH=1 if you really mean to.")
+                f"refusing to read outside the seti-cookbook repo ({REPO}). "
+                "Set SETI_COOKBOOK_MCP_ALLOW_ANY_PATH=1 if you really mean to.")
     return str(p)
 
 
@@ -91,7 +91,7 @@ def _open(path, f_start=None, f_stop=None, t_start=None, t_stop=None, fs=None):
 # --------------------------------------------------------------- what's here
 @mcp.tool
 def list_data() -> dict:
-    """Every data file setiTuna can open in this checkout (data/ is gitignored -
+    """Every data file seti-cookbook can open in this checkout (data/ is gitignored -
     these are files YOU downloaded from the public Breakthrough Listen archive).
     Also lists the synthetic scenes available without any download."""
     files = seti_io.list_data()
@@ -290,7 +290,7 @@ def cadence_check(recipe: str, pointings: list, tol_hz: float = 200.0,
 # ------------------------------------------------------------------ scoring
 @mcp.tool
 def benchmark(write_leaderboard: bool = True) -> dict:
-    """Score every recipe on setiTuna's shared synthetic benchmark and return the
+    """Score every recipe on seti-cookbook's shared synthetic benchmark and return the
     ranking. Clean recipes (zero false alarms on the pure-noise NULL scenes) rank
     first; a detector that fires on noise has found nothing. Optionally rewrites
     LEADERBOARD.md."""
@@ -580,10 +580,10 @@ def coverage() -> dict:
 
 @mcp.tool
 def gpu_status() -> dict:
-    """Is a GPU actually usable, and is it worth it? setiTuna's array module
-    switches to cupy only when SETITUNA_GPU=1 AND a device really exists."""
+    """Is a GPU actually usable, and is it worth it? seti-cookbook's array module
+    switches to cupy only when SETI_COOKBOOK_GPU=1 AND a device really exists."""
     import numpy as _np
-    info = {"env_SETITUNA_GPU": os.environ.get("SETITUNA_GPU", "0"),
+    info = {"env_SETI_COOKBOOK_GPU": os.environ.get("SETI_COOKBOOK_GPU", os.environ.get("SETITUNA_GPU", "0")),
             "measured_speedup_note":
                 "doppler_coherence on the 16x1048576 Voyager file: 92.1 s CPU "
                 "vs 4.4 s GPU = 21x, identical result. NOTE the CPU and GPU "

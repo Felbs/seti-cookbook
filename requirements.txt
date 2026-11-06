@@ -1,4 +1,4 @@
-# setiTuna — hunt for technosignatures in Breakthrough Listen open data
+# seti-cookbook — hunt for technosignatures in Breakthrough Listen open data
 # Core (everything in the repo runs on these; no GPU, no telescope, no SDR):
 numpy>=1.21
 scipy>=1.7
@@ -13,8 +13,8 @@ blimpy>=2.0.0        # read/verify BL filterbank + HDF5 data products
 # OPTIONAL, and honestly optional — the repo degrades gracefully without each:
 # astropy>=5.0       # barycentric/LSR velocity correction in natural_signals.py
 #                    #   (without it: topocentric velocities, with a warning)
-# fastmcp>=2.0       # the OPTIONAL MCP companion, tools/setituna_mcp.py
-# cupy               # OPTIONAL GPU path (SETITUNA_GPU=1); numpy is the default
+# fastmcp>=2.0       # the OPTIONAL MCP companion, tools/seti_cookbook_mcp.py
+# cupy               # OPTIONAL GPU path (SETI_COOKBOOK_GPU=1); numpy is the default
 # setigen            # synthetic injection for completeness audits
 
 # also required on PATH: curl (star_sweep.py / fetch_public_data.py downloads)

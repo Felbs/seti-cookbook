@@ -32,7 +32,7 @@ CATALOG = {
     "voyager": dict(
         shows="a REAL confirmed technosignature at interstellar distance: "
               "Voyager 1's X-band carrier + both telemetry sidebands, drifting "
-              "-0.38 Hz/s. setiTuna's standing calibration.",
+              "-0.38 Hz/s. seti-cookbook's standing calibration.",
         size="~50 MB",
         how="direct URL from the BL open-data archive",
         url="http://blpd0.ssl.berkeley.edu/Voyager_data/"
