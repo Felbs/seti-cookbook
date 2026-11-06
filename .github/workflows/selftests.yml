@@ -1,4 +1,5 @@
-# CPU-only self-tests: no downloads of telescope data, no GPU, no turboSETI.
+# CPU-only self-tests: no GPU, no turboSETI; the only download is the 50 MB
+# Voyager 1 calibration file (cached between runs).
 name: selftests
 on: [push, pull_request]
 jobs:
@@ -24,6 +25,13 @@ jobs:
         run: python bl_archive.py selftest
       - name: signal planting and fair matching
         run: python inject.py selftest
+      - name: cache the Voyager 1 calibration file (50 MB, public BL data)
+        uses: actions/cache@v4
+        with:
+          path: data/Voyager1.single_coarse.fine_res.h5
+          key: voyager1-single-coarse-fine-res
+      - name: fetch Voyager 1 if not cached
+        run: test -s data/Voyager1.single_coarse.fine_res.h5 || python fetch_public_data.py voyager
       - name: Earth drift vs Voyager 1
         run: python earth_term.py gate
       - name: reach vs Enriquez 2017 Table 3
