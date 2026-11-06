@@ -1,9 +1,7 @@
 # seti-cookbook 🛸 — open technosignatures for alien hunters
 
 Search public data from the world's biggest telescopes for signs of technology,
-with detectors anyone can write — no dish required. *(Formerly **setiTuna**; the
-old GitHub address redirects here, and the old `SETITUNA_*` environment
-variables still work.)* Validated by detecting **Voyager 1** (carrier + both telemetry
+with detectors anyone can write — no dish required. Validated by detecting **Voyager 1** (carrier + both telemetry
 sidebands, SNR 245, drift −0.38 Hz/s) in Green Bank open data, then re-finding
 it **by structure alone** with our sideband-pair search.
 
