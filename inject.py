@@ -59,7 +59,8 @@ def level_for(data, snr):
 
 
 def plant(data, foff_hz, tsamp, plants, seed=0):
-    """Add tones to a (nt, nchan) array in place and return it.
+    """Add tones to a (nt, nchan) array in place and return it (deterministic;
+    seed is kept for API stability and unused).
 
     plants: list of dict(ch=start channel at t=0 (float), drift=Hz/s, snr=...)
     Channel index follows the data's own order; foff_hz is the (signed)
@@ -73,7 +74,7 @@ def plant(data, foff_hz, tsamp, plants, seed=0):
     work = data if asc else data[:, ::-1]
     df = abs(foff_hz)
     fr = stg.Frame.from_data(df=df, dt=tsamp, fch1=0.0, ascending=True,
-                             data=np.ascontiguousarray(work, dtype=np.float64), seed=seed)
+                             data=np.ascontiguousarray(work, dtype=np.float64))
     for p in plants:
         ch = p["ch"] if asc else (nc - 1 - p["ch"])
         lvl = p.get("level") or level_for(data, p["snr"])
