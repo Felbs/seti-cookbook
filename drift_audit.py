@@ -8,7 +8,11 @@ the same one or two values, then on this kind of file the reported drift rate
 carries no information, and ANY veto built on it ("all hits share one drift
 rate, so they are instrumental") is void.
 
-That is exactly what happens on BL mid-resolution (.0002, 2.86 kHz x 1.07 s)
+Planted tones are smeared within each integration like real ones (a fix found by
+the 2026-11-06 peer review). On fine-res files that exposes turboSETI's drift
+smearing loss: above ~0.15 Hz/s sensitivity falls roughly as |drift|/0.15.
+
+The void-drift problem is exactly what happens on BL mid-resolution (.0002, 2.86 kHz x 1.07 s)
 products: the drift quantum is ~5-10 Hz/s, wider than the whole range a planet
 can produce (~0.05-4 Hz/s at L/S band). See SWEEP_RESULTS.md for the history.
 
@@ -66,13 +70,20 @@ def plant(h5, out):
         ch0 = spacing // 2 + i * spacing
         cc = ch0 // fpc
         amp = SNR_TARGET * np.std(d[:, 0, cc * fpc:(cc + 1) * fpc].sum(0)) / nt
-        pos = ch0 + dr * t / foff_hz          # dr is in Hz/s; channel axis may run downward
+        # A real drifting tone SMEARS within each integration: it sweeps
+        # dr*tsamp Hz while that spectrum is being integrated (fine-res 3 Hz/s
+        # = ~20 channels per 18 s spectrum). Spread the power over the swept
+        # channels by sub-sampling the integration, or the plant is far easier
+        # to find than a real signal (found by the 2026-11-06 peer review).
+        nsub = max(4, int(np.ceil(abs(dr) * ts / df * 4)))
         for k in range(nt):
-            j = int(np.floor(pos[k]))
-            fr = pos[k] - j
-            if 0 <= j < nc - 1:
-                d[k, 0, j] += amp * (1 - fr)
-                d[k, 0, j + 1] += amp * fr
+            for s in range(nsub):
+                p = ch0 + dr * (t[k] + (s + 0.5) / nsub * ts) / foff_hz
+                j = int(np.floor(p))
+                fr = p - j
+                if 0 <= j < nc - 1:
+                    d[k, 0, j] += amp / nsub * (1 - fr)
+                    d[k, 0, j + 1] += amp / nsub * fr
         truth.append((dr, ch0))
     wf.data = d.astype(np.float32)
     fn = Path(out) / "planted.h5"
@@ -138,19 +149,28 @@ def main():
             inrange = [(dr, r) for (dr, _), r in zip(truth, rep_by_tone) if abs(dr) <= kw["max_drift"]]
             ok = sum(1 for dr, r in inrange
                      if r is not None and abs(r - dr) <= max(0.1, 0.10 * abs(dr)))
-            score.append((label, ok, len(inrange)))
-            print(f"  {len(reported)}/{len(truth)} found; drift CORRECT for {ok}/{len(inrange)}"
-                  f" in range; distinct values reported: {distinct}")
+            found = [(dr, r) for dr, r in inrange if r is not None]
+            missed = [dr for dr, r in inrange if r is None]
+            score.append((label, ok, len(found), missed))
+            print(f"  {len(reported)}/{len(truth)} found; drift CORRECT for {ok}/{len(found)} of the found"
+                  f" tones; distinct values reported: {distinct}")
         print()
-        lab, ok, n = score[0]
-        print(f"old-sweep settings: drift correct for {ok}/{n} planted tones")
-        if ok < 0.7 * n:
-            print("VERDICT: drift is UNRESOLVED on this file. Ten different planted drifts came back")
-            print("as the same few values, so 'all hits share one drift rate' says nothing about RFI.")
+        lab, ok, nfound, missed = score[0]
+        ts = float(a["tsamp"])
+        smear = abs(a["foff"]) * 1e6 / ts      # Hz/s at which a tone moves 1 channel per spectrum
+        print(f"old-sweep settings: drift correct for {ok}/{nfound} tones that were found; "
+              f"missed {len(missed)}: {missed}")
+        if nfound and ok < 0.7 * nfound:
+            print("VERDICT: drift is UNRESOLVED on this file. Planted drifts came back as the")
+            print("same few values, so 'all hits share one drift rate' says nothing about RFI.")
             print("A drift-based verdict needs fine-resolution (.0000, ~2.8 Hz) data.")
         else:
-            print("VERDICT: drift is resolved on this file; drift-based vetoes are meaningful.")
-            print("(Keep max_drift modest: on fine-res files a very wide max_drift aliases reports.)")
+            print("VERDICT: drift is resolved for the tones that were found; drift vetoes are meaningful.")
+        if missed:
+            print(f"SENSITIVITY: above ~{smear:.2f} Hz/s a tone moves more than one channel during each")
+            print(f"{ts:.1f} s spectrum and its power smears; turboSETI sums one channel per spectrum, so")
+            print(f"its sensitivity falls roughly as |drift| / {smear:.2f}. Missed here (planted at a fixed")
+            print(f"integrated strength): {missed}. Limits from this pipeline hold only for slow drifts.")
     finally:
         if args.keep:
             print(f"(planted slice kept in {out})")

@@ -36,7 +36,10 @@ With BL's published SEFD (10 Jy) that is:
 > frame brighter than ~12 Jy — about 5 GW aimed at us — was on during those
 > three 5-minute scans in March 2016.**
 
-That is 1/2000 of the Arecibo planetary radar. It is not a clearance of
+That is 1/2000 of the Arecibo planetary radar. Caveat (2026-11-06 peer review): the planted
+tones were not smeared within each 18 s spectrum. At the injected drift (Earth's −0.114 Hz/s,
+< 1 channel per spectrum) that barely matters, but for a beacon whose OWN drift adds more than
+~±0.04 Hz/s the real sensitivity is worse than stated. It is not a clearance of
 Barnard's Star: one night, one frequency convention, a 15-minute window.
 
 **Amendment, stated openly.** The plan said "an SNR-8 tone must be recovered".

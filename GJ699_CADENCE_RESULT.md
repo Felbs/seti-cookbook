@@ -48,9 +48,24 @@ hit); the fifth was the same 1674.9977 MHz track in ON 2 and ON 3 (drift
 that track is plainly present in **both later OFF scans (SNR 31 and 33)** —
 turboSETI simply had not recorded it there. Local; killed.
 
-**Verdict: null.** No narrowband (≲ 3 Hz) drifting signal with |drift| ≤ 4 Hz/s
-from Barnard's Star at SNR ≥ 10 in 1.1–1.9 GHz during this cadence. With BL's
-SEFD of 10 Jy that is S ≲ 7 Jy, an EIRP of order 3 GW at 5.96 ly — a radiometer
-estimate: this turboSETI run was **not** injection-calibrated (drift_audit's
-fine-resolution test recovered 7/9 planted drifts correctly). Not covered: the
-GBT's notched 1.20–1.34 GHz radar band, |drift| > 4 Hz/s, one night only.
+**Verdict: null — for slowly drifting signals.** No narrowband (≲ 3 Hz)
+signal from Barnard's Star at SNR ≥ 10 in 1.1–1.9 GHz during this cadence.
+Two corrections, both found by the peer-project review the same day:
+
+- **Drift range actually searched: ±3.78 Hz/s, not ±4.** turboSETI 2.3.2 builds
+  its drift blocks in steps of (N−1) integrations and stops short of
+  `max_drift`; the largest drift in our own hit lists is 3.7836 Hz/s.
+- **Sensitivity falls with drift.** Above ~0.15 Hz/s (one 2.8 Hz channel per
+  18 s spectrum) a tone smears across channels inside each spectrum, and
+  turboSETI sums one channel per spectrum. `drift_audit.py`, now planting
+  realistically smeared tones, finds every slow tone (≤ 0.3 Hz/s) and misses
+  every tone at ≥ 1 Hz/s at a strength that is easy without drift. So the
+  limit below holds for |drift| ≲ 0.15 Hz/s and degrades roughly as
+  |drift| / 0.15 above that (≈ 6× worse at 1 Hz/s, ≈ 25× at 3.8 Hz/s).
+  Earth alone gives −0.12 Hz/s here, so a transmitter whose own drift is
+  small sits inside the good zone; a fast-spinning planet's would not.
+
+With BL's SEFD of 10 Jy: S ≲ 7 Jy, an EIRP of order 3 GW at 5.96 ly, for slow
+drifts — a radiometer estimate, not injection-calibrated. Not covered: the
+GBT's notched 1.20–1.34 GHz radar band, |drift| > 3.78 Hz/s, one night only.
+Prior work to compare with: FAST's Barnard's Star search (2023, AJ 166, 190).
