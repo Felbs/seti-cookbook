@@ -5,6 +5,7 @@ type: software
 authors:
   - alias: Felbs
 repository-code: "https://github.com/Felbs/seti-cookbook"
+license: MIT
 keywords:
   - SETI
   - technosignatures

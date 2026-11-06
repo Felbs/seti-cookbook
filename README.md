@@ -399,3 +399,7 @@ This repo is a thin layer of curiosity on top of other people's instruments.
 - The people whose false alarms taught everyone how to do this properly, from
   Jocelyn Bell Burnell's LGM-1 to Emily Petroff's microwave oven. See
   [SETI_HISTORY.md](SETI_HISTORY.md).
+
+## License and citation
+
+MIT — see [LICENSE](LICENSE). Code borrowed in spirit from other projects keeps their credit above; data belongs to Breakthrough Listen and SDSS under their own terms. To cite this work, use [CITATION.cff](CITATION.cff) (GitHub shows a "Cite this repository" button).
