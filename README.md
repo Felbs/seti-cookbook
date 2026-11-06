@@ -55,6 +55,7 @@ calibration for everything below.*
   just that 2.9 MHz from the public Green Bank cadence over HTTP. **Null; rules
   out a steady beacon above ~5 GW** aimed at us during those scans
   ([HI_STARFRAME_RESULT.md](HI_STARFRAME_RESULT.md)).
+- **Barnard's Star, full fine-resolution cadence** (77 GB, 1.1–1.9 GHz): 9 events in every ON scan, all explained — Inmarsat/GPS satellites at zero drift, where a real signal must carry Earth's −0.12 Hz/s. **Null** ([GJ699_CADENCE_RESULT.md](GJ699_CADENCE_RESULT.md); `cadence_verdict.py` explains each event).
 - `laser_lines.py` — optical SETI on 199 Sloan (SDSS DR17) star spectra,
   exposure by exposure. **3 survivors, 2 inside Earth's water-vapour bands**;
   lines ≳ 12×10⁻¹⁷ erg/s/cm² are caught ~89 % of the time where the method can
