@@ -25,11 +25,14 @@ quotes an SNR ~4x smaller than the radiometer SNR (#1). This search:
      channel-to-channel noise of the bandpass-removed time-summed spectrum,
      exactly what inject.radiometer_noise measures; boxcar rows are divided by
      the measured noise of the same boxcar on that spectrum;
-  6. suppresses neighbours drift-aware (select_hits): a weaker hit whose track
-     touches a stronger one's (within half-widths + 2 channels at either end, or
-     crossing) is dropped only if its SNR is at most 1.5x what the stronger signal
-     can leak into it during the spectra where they overlap. turboSETI instead
-     drops everything within a fixed +-max_drift*T/df (~406) channels;
+  6. keeps one best-per-channel map per boxcar-width octave (so a fast wide
+     track cannot hide a narrow carrier at the same start channel) and
+     suppresses neighbours by TRACK (select_hits): a weaker hit whose track
+     touches a stronger one's (within half-widths + 2 channels at either end,
+     or crossing) is dropped, except a narrow slow carrier under a much wider
+     fast track that carries more than 1.5x the power that track can leak into
+     it. turboSETI instead drops everything within a fixed +-max_drift*T/df
+     (~406) channels of a stronger hit;
   7. writes a turboSETI-compatible .dat (find_event_pipeline reads it) and a
      CSV with detection SNR, power SNR, drift, freq at t=0, coarse channel and
      the local noise around each hit.
@@ -325,14 +328,18 @@ def select_hits(c, k, w, snr, nt, cap=MAX_HITS_PER_COARSE):
     Candidates are taken strongest first. A weaker candidate b TOUCHES a kept
     hit a if their tracks come within (half-width_a + half-width_b +
     SUPPRESS_TOL) channels at the first or last spectrum, or cross in between.
-    A touching b is dropped only if it could be a by-product of a: its SNR is at
-    most GHOST_MARGIN x the most a can put into b's track during the spectra
-    where the two overlap,
+    A touching b is dropped (same signal, or a by-product of it), with ONE
+    exception: a narrow, slow b (w_b <= 3 channels) under a much wider, fast a
+    (w_a >= max(8, 4 w_b)) is kept if its SNR exceeds GHOST_MARGIN x the most a
+    can leak into b's track during the spectra where they overlap,
         bound = snr_a * (n_overlap / nt) * min(w_a, w_b) / sqrt(w_a * w_b),
-    with n_overlap = ceil(2 (hw_a + hw_b) / |u_a - u_b|) spectra (u in channels per
-    spectrum), nt for parallel tracks. So the same tone found at a neighbouring
-    start or drift is dropped, while an independent narrow carrier that a wide,
-    fast track merely crosses for a spectrum or two is kept.
+        n_overlap = ceil(2 (hw_a + hw_b) / |u_a - u_b|) spectra (u: channels/spectrum).
+    Why: on real data a wide boxcar track laid across broadband interference
+    (e.g. Inmarsat at 1545 MHz) out-scores the narrow carriers inside it and
+    would otherwise erase them; but a stationary feature tens of channels wide
+    leaks more into crossing tracks than the narrow-tone bound predicts, so the
+    bound is not trusted in general (measured on GJ699 0003: without this
+    restriction one ~100-channel feature at 1420.017 MHz gave 60 hits).
     Returns the indices (into the candidate arrays) of the kept hits."""
     if len(c) == 0:
         return []
@@ -366,7 +373,8 @@ def select_hits(c, k, w, snr, nt, cap=MAX_HITS_PER_COARSE):
         du = np.abs(u[j] - u[i])
         n_ov = np.where(du < 1e-9, nt, np.clip(np.ceil(2 * (hw[j] + hw[i]) / np.maximum(du, 1e-9)), 1, nt))
         bound = sn[i] * (n_ov / nt) * np.minimum(ww[i], ww[j]) / np.sqrt(ww[i] * ww[j])
-        alive[j[sn[j] <= GHOST_MARGIN * bound]] = False
+        exception = (ww[j] <= 3) & (ww[i] >= np.maximum(8, 4 * ww[j])) & (sn[j] > GHOST_MARGIN * bound)
+        alive[j[~exception]] = False
     return kept
 
 
