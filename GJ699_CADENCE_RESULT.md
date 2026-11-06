@@ -1,10 +1,12 @@
 # Hunt result: Barnard's Star, the full fine-resolution ON/OFF cadence — 2026-11-06
 
+> **Evidence level E2 for slow drifts (≤ 0.15 Hz/s), E1 above 0.5 Hz/s** — see [EVIDENCE.md](EVIDENCE.md).
+
 **What this replaces.** The earlier sweep called Barnard's Star "all RFI" from a
 mid-resolution file whose drift steps (~9.8 Hz/s) were too coarse to judge
 drift at all (see `drift_audit.py`, `SWEEP_RESULTS.md`). This is the proper search.
 
-**Data.** Green Bank, 2016-03-12, the six fine-resolution (2.84 Hz × 18 s)
+**Data.** Green Bank, 2016-03-10 (MJD 57457), the six fine-resolution (2.84 Hz × 18 s)
 files of one ON/OFF cadence: ON, OFF, ON, OFF, ON, OFF, 288 s each, 1.1–1.9 GHz,
 12.8 GB each (77 GB total).
 
@@ -60,12 +62,50 @@ Two corrections, both found by the peer-project review the same day:
   turboSETI sums one channel per spectrum. `drift_audit.py`, now planting
   realistically smeared tones, finds every slow tone (≤ 0.3 Hz/s) and misses
   every tone at ≥ 1 Hz/s at a strength that is easy without drift. So the
-  limit below holds for |drift| ≲ 0.15 Hz/s and degrades roughly as
-  |drift| / 0.15 above that (≈ 6× worse at 1 Hz/s, ≈ 25× at 3.8 Hz/s).
-  Earth alone gives −0.12 Hz/s here, so a transmitter whose own drift is
-  small sits inside the good zone; a fast-spinning planet's would not.
+  limit below holds best for |drift| ≲ 0.15 Hz/s and degrades with drift
+  (measured below). Earth alone gives −0.12 Hz/s here, so a transmitter whose
+  own drift is small sits inside the good zone; a fast-spinning planet's would not.
 
-With BL's SEFD of 10 Jy: S ≲ 7 Jy, an EIRP of order 3 GW at 5.96 ly, for slow
-drifts — a radiometer estimate, not injection-calibrated. Not covered: the
-GBT's notched 1.20–1.34 GHz radar band, |drift| > 3.78 Hz/s, one night only.
+**Sensitivity — measured by injection-recovery (2026-11-06, `recovery.py`).**
+Smeared setigen tones were planted into one real coarse channel of ON scan 0003
+(1418.6–1421.6 MHz) and searched with exactly these turboSETI settings
+(max_drift 4, min_drift 0, snr 10); 1,216 plants over three runs, scored
+one-to-one along each tone's track. Strength is TRUE radiometer SNR, i.e. what
+the radiometer equation (and `reach.py`) means by SNR.
+
+| drift (Hz/s) | 90 % found per scan at true SNR | S (Jy) | EIRP at 5.96 ly |
+|---|---|---|---|
+| ≤ 0.15 | ~70 | ~49 | ~20 GW |
+| 0.5 | ≤ 200 | ≤ 140 | ≤ 56 GW |
+| 1 | ~300 | ~210 | ~84 GW |
+| 2 | ~600 | ~420 | ~170 GW |
+| 3.5 | ~1200 | ~840 | ~340 GW |
+
+(SEFD 10 Jy, 2.84 Hz channels, 288 s per scan, 2 polarisations, 1 Hz signal.)
+Requiring the tone in all three ONs raises the slow-drift figure to about true
+SNR 80: **S ≲ 56 Jy, EIRP ≲ 22 GW for slow drifts.** No plant was lost to a wrong
+drift or a stronger neighbour; every miss was too faint.
+
+**Correction (2026-11-06).** This file first quoted "S ≲ 7 Jy, ~3 GW" from the
+radiometer equation at SNR 10. That is ~8× too optimistic, for two reasons found
+by the injections:
+
+1. **turboSETI's SNR is not radiometer SNR.** turboSETI 2.3.2 divides by the
+   5–95 %-trimmed spread of the whole time-summed coarse channel
+   (`helper_functions.comp_stats`), which includes the channel's bandpass
+   shape. Measured on 62 coarse channels of ON 0003 and OFF 0004 across
+   1.15–1.86 GHz, that spread is 3.2–6.1× (typically ~4.1×) the true
+   channel-to-channel noise — and the true noise matches the radiometer
+   equation to ~5 % (0.023 vs 0.0248 of the mean). So "SNR 10" in turboSETI
+   is a true SNR of ~40.
+2. **Drift and the drift tree.** Taylor-tree discretisation and smearing cost
+   another ~1.7× even at slow drift. (turboSETI also never searches drift
+   exactly 0 — `abs(drift_rate) > min_drift` is strict — irrelevant for a sky
+   source, which always carries Earth's term.)
+
+The null itself is unchanged. Not covered: the GBT's notched 1.20–1.34 GHz
+radar band, |drift| > 3.78 Hz/s, one night only. The completeness was measured
+in one coarse channel; the noise ratio, which sets most of it, was checked
+band-wide.
+
 Prior work to compare with: FAST's Barnard's Star search (2023, AJ 166, 190).

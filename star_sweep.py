@@ -13,7 +13,6 @@ survive the sideband/structure checks. Everything is explained, not thresholded.
 
 Downloads land in data/ (gitignored); a summary goes to SWEEP_RESULTS.md.
 """
-import json
 import subprocess
 import sys
 import time
@@ -21,7 +20,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data"
-API = "http://seti.berkeley.edu/opendata/api/query-files"
+sys.path.insert(0, str(HERE))
 PY = sys.executable
 
 # nearby / classic SETI targets (BL archive target names)
@@ -30,21 +29,21 @@ DEFAULT = ["GJ699", "GJ411", "GJ887", "GJ273", "GJ15A", "GJ71",
 
 
 def query_smallest(target):
-    out = DATA / f"_{target}.json"
+    """Smallest fine-frequency GBT file whose archive name is EXACTLY target.
+    The archive matches by prefix (L12): ?target=HIP2 returns HIP28614 etc."""
+    import bl_archive
     try:
-        subprocess.run(["curl", "-s", "--connect-timeout", "25",
-                        f"{API}?target={target}&telescopes=GBT&file-types=HDF5&limit=12",
-                        "-o", str(out)], timeout=40)
-        rows = json.loads(out.read_text()).get("data", [])
+        rows = bl_archive.query(target, telescope="GBT")
     except Exception as e:
         return None, f"query error {e}"
-    rows = [r for r in rows if r.get("size", 0) > 1e6]
+    on, _, dropped = bl_archive.exact_rows(target, rows)
+    if not on:
+        return None, (f"no file named exactly {target} "
+                      f"({len(dropped)} prefix matches for other targets ignored)")
+    on = [r for r in on if r.get("size", 0) > 1e6]
     # turboSETI needs FINE-FREQUENCY products (.0000 hi-spectral, .0002 mid);
     # the .0001 high-time-resolution files are rejected (issue #117).
-    fine = [r for r in rows if ".0001." not in r["url"]
-            and (".0000." in r["url"] or ".0002." in r["url"] or "gpuspec" in r["url"])]
-    fine = [r for r in fine if ".0001." not in r["url"]]
-    pool = fine or [r for r in rows if ".0001." not in r["url"]]
+    pool = [r for r in on if bl_archive.product(r["url"].split("/")[-1]) in ("0000", "0002")]
     if not pool:
         return None, "no fine-frequency GBT HDF5 (only HTR)"
     return sorted(pool, key=lambda r: r["size"])[0], None
@@ -103,7 +102,10 @@ def hunt(h5):
     if n == 0:
         verdict = "CLEAN (0 hits) - quiet sky"
     elif len(drifts) <= 2:
-        verdict = f"RFI ({n} hits all at {len(drifts)} drift rate(s) = instrumental)"
+        # Evidence level: one file, no OFF scan. A shared drift rate SUGGESTS
+        # an instrument but is not a veto; only an ON/OFF cadence can kill hits.
+        verdict = (f"SCREEN: {n} hits at {len(drifts)} drift rate(s), likely instrumental; "
+                   f"single ON file, no OFF - not a null")
     else:
         # a real candidate would have varied drift AND not be a giant RFI blast
         strong = [h for h in hits if h[1] > 20]
@@ -139,6 +141,8 @@ def main():
             pass
     # summary
     lines = ["# Nearby-star SETI sweep\n",
+             "> **Evidence level E0** (one ON file per star, no OFF scan): a screen, "
+             "never a null - see [EVIDENCE.md](EVIDENCE.md).\n",
              f"Swept {len(results)} targets (GBT open data, turboSETI + forensics).\n",
              "| target | hits | drift rates | verdict |", "|---|---|---|---|"]
     for tgt, r, err in results:
@@ -149,7 +153,7 @@ def main():
     reviews = [t for t, r, e in results if r and r["verdict"].startswith("REVIEW")]
     lines.append(f"\n**Candidates needing review: {reviews or 'none'}**")
     (HERE / "SWEEP_RESULTS.md").write_text("\n".join(lines), encoding="utf-8")
-    print("\n" + "\n".join(lines[4:]), flush=True)
+    print("\n" + "\n".join(lines[5:]), flush=True)
 
 
 if __name__ == "__main__":

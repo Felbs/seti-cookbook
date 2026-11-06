@@ -17,110 +17,48 @@ Credit: Breakthrough Listen open data (Lebofsky et al. 2019 PASP 131:124505;
 Price et al. 2020 AJ 159:86), Berkeley SETI Research Center.
 """
 import argparse
-import json
 import os
-import re
 import subprocess
 import time
 import sys
-import urllib.parse
-import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE / "data"
-API = "http://seti.berkeley.edu/opendata/api/query-files"
-
-
-def query(target, limit=40):
-    url = API + "?" + urllib.parse.urlencode(
-        {"target": target, "file-types": "HDF5", "limit": limit})
-    with urllib.request.urlopen(url, timeout=60) as r:
-        return json.loads(r.read()).get("data", [])
-
-
-def classify(name):
-    """ON or OFF from the filename. BL marks the throwaway sky positions with
-    _OFF_ in the product name; everything else is a target scan."""
-    return "OFF" if "_OFF_" in name.upper() else "ON"
-
-
-def seq(name):
-    """Sequence number of the POINTING within the session (…_GJ699_0005.gpuspec…).
-
-    Deliberately anchored to the scan number that precedes '.gpuspec', because
-    the product suffix also ends in four digits: a naive "last 4-digit group"
-    rule reads 0000/0001/0002 (the RESOLUTION) as the scan number and happily
-    returns three copies of the same pointing as a six-scan cadence.
-    """
-    m = re.search(r"_(\d{4})\.gpuspec", name)
-    return int(m.group(1)) if m else -1
-
-
-def product(name):
-    """Which of the three BL data products this is.
-
-    Each pointing is released three times at different resolutions, and picking
-    the wrong one silently ruins a drift search:
-      0000  ~3 Hz channels, ~18 s integrations  -> FINE FREQUENCY. Narrowband
-            SETI needs this; it is also the 12.8 GB one.
-      0001  high TIME resolution, coarse in frequency (~1.3 GB)
-      0002  mid resolution (~0.2 GB)
-    """
-    if ".gpuspec.0000." in name:
-        return "0000"
-    if ".0001." in name:
-        return "0001"
-    if ".gpuspec.0002." in name:
-        return "0002"
-    return "?"
+sys.path.insert(0, str(HERE))
+import bl_archive  # noqa: E402  (exact-name, one-session, one-band cadence rules)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--target", default="GJ699")
-    ap.add_argument("--n", type=int, default=6, help="how many files (cadence=6)")
+    ap.add_argument("--n", type=int, default=6, help="how many scans of the cadence (max 6)")
     ap.add_argument("--product", default="0000",
                     choices=["0000", "0001", "0002"],
                     help="0000=fine frequency (~3 Hz, what drift "
                          "searches need), 0001=fine time, 0002=mid")
+    ap.add_argument("--session", type=int, default=None,
+                    help="MJD day of the session to take (default: the first valid one)")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
-    rows = query(a.target)
-    if not rows:
-        print(f"no HDF5 files for {a.target}", file=sys.stderr)
+    # The archive matches target names by PREFIX (L12). bl_archive keeps only
+    # exact names, real OFFs (<target>_OFF, >= 0.2 deg away), and six
+    # consecutive alternating scans from ONE session, band and product.
+    good = bl_archive.report(a.target, a.product)
+    if a.session is not None:
+        good = [c for c in good if c["day"] == a.session]
+    if not good:
+        print(f"no valid ON/OFF cadence for {a.target} (product {a.product}"
+              f"{', session %d' % a.session if a.session else ''})", file=sys.stderr)
         return 1
-    files = []
-    for x in rows:
-        u = x.get("url") or ""
-        n = u.split("/")[-1]
-        if n and product(n) == a.product:
-            files.append(dict(url=u, name=n, size=x.get("size", 0),
-                              kind=classify(n), seq=seq(n)))
-    # ONE file per pointing, in observation order — otherwise the three
-    # resolutions of a single scan masquerade as three scans.
-    by_seq = {}
-    for f in files:
-        by_seq.setdefault(f["seq"], f)
-    files = [by_seq[k] for k in sorted(by_seq)]
-    pick = files[:a.n]
-    if not pick:
-        print(f"no product-{a.product} files for {a.target}", file=sys.stderr)
-        return 1
-
+    cad = good[0]
+    pick = [dict(url=s["url"], name=s["name"], size=s["size"], kind=s["kind"])
+            for s in cad["scans"][:a.n]]
     total = sum(f["size"] for f in pick) / 1e9
-    print(f"{a.target}: {len(files)} pointing(s) with product {a.product}; "
-          f"taking {len(pick)}")
-    pattern = "".join("A" if f["kind"] == "ON" else "-" for f in pick)
-    for f in pick:
-        print(f"  seq {f['seq']:>4}  {f['kind']:<3}  {f['size']/1e9:5.2f} GB  "
-              f"{f['name'][:60]}")
-    print(f"  cadence pattern: {pattern}   total {total:.2f} GB")
-    if pattern[:6] == "A-A-A-":
-        print("  -> textbook ABACAD: ON/OFF alternating, the comparison that "
-              "kills false positives")
+    print(f"\ntaking {len(pick)} scans of session MJD {cad['day']} "
+          f"({cad['project']}, band {cad['fc']} MHz): {total:.2f} GB")
     if a.dry_run:
         return 0
 

@@ -1,0 +1,36 @@
+# CPU-only self-tests: no downloads of telescope data, no GPU, no turboSETI.
+name: selftests
+on: [push, pull_request]
+jobs:
+  selftests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install (CPU only)
+        run: pip install numpy scipy h5py hdf5plugin astropy matplotlib setigen "setuptools<81"
+      - name: no data files in git
+        run: |
+          bad=$(git ls-files | grep -E '\.(h5|fil|npz|dat|fits)$|^data/' || true)
+          big=$(git ls-files -z | xargs -0 du -k | awk '$1 > 2048 {print $2}')
+          if [ -n "$bad$big" ]; then echo "data or >2 MB files tracked:"; echo "$bad $big"; exit 1; fi
+      - name: archive selection rules
+        run: python bl_archive.py selftest
+      - name: signal planting and fair matching
+        run: python inject.py selftest
+      - name: Earth drift vs Voyager 1
+        run: python earth_term.py gate
+      - name: reach vs Enriquez 2017 Table 3
+        run: python reach.py
+      - name: coherence detector
+        run: python coherence.py selftest
+      - name: recipe framework
+        run: python cookbook.py selftest
+      - name: novel detectors
+        run: python agent.py selftest

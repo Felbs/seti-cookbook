@@ -1,5 +1,7 @@
 # Hunt result: Epsilon Eridani (GJ 144) — 2026-07-25
 
+> **Evidence level VOID** — see [EVIDENCE.md](EVIDENCE.md).
+
 > **⚠️ CORRECTION (2026-11-06): the "RFI" verdicts below are VOID.**
 > They rest on "all hits share one or two drift rates, so they are instrumental."
 > On these mid-resolution (.0002) files one drift step is ~9.8 Hz/s (turboSETI

@@ -9,7 +9,7 @@ OUR data - to within the velocity's error bar. That turns a 750 MHz haystack
 into a few kHz.
 
 For Barnard's Star (GJ699, RV about -110.5 km/s, approaching) the window lands
-near 1421.05 MHz on 2016-03-12 (the star's approach plus ~26 km/s of Earth's
+near 1421.05 MHz on 2016-03-10 (the star's approach plus ~26 km/s of Earth's
 orbital motion toward it that March) - inside the 1418.59-1421.56 MHz coarse
 channel of the public
 Green Bank fine-resolution (.0000, 2.8 Hz x 18 s) ON/OFF cadence. We read only

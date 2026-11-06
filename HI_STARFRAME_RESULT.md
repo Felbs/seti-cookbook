@@ -1,5 +1,7 @@
 # Hunt result: the hydrogen line in Barnard's Star's own frame — 2026-11-06
 
+> **Evidence level E2** — see [EVIDENCE.md](EVIDENCE.md).
+
 **Idea.** If someone at Barnard's Star (GJ699, 5.96 ly) runs a beacon at the
 hydrogen line — the frequency every radio astronomer knows — tuned in *their*
 star's rest frame, then the star's radial velocity (−110.5 km/s) plus Earth's
@@ -7,7 +9,7 @@ motion predict exactly where it lands in our data. That shrinks the haystack
 from 750 MHz to ±2.5 kHz.
 
 **Data.** The public Green Bank fine-resolution (2.84 Hz × 18 s) ON/OFF
-cadence of 2016-03-12, three 288 s scans on the star and three off it. We read
+cadence of 2016-03-10, three 288 s scans on the star and three off it. We read
 only the one 2.93 MHz coarse channel that holds the prediction, straight from
 the archive over HTTP (64 MB of each 12.8 GB file). `python hi_starframe.py
 fetch && python hi_starframe.py run`.

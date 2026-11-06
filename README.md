@@ -45,6 +45,17 @@ calibration for everything below.*
   hear it. Gate: reproduces Breakthrough Listen's published GBT sensitivity
   (Enriquez et al. 2017: 17 Jy, 5.2×10¹² W at 50 pc). GBT hears an
   Arecibo-class radar to ~224 ly; a used 3 m backyard dish to ~5–9 ly.
+  These are radiometer numbers; a real turboSETI search needs several times
+  more (next item).
+- `inject.py` + `recovery.py` — plant hundreds of realistically smeared fake
+  signals (setigen) into a real scan, run the exact search, and count what
+  comes back, one-to-one along each signal's track. Finding: turboSETI's
+  "SNR 10" is a true SNR of ~40 on raw Green Bank channels (its noise estimate
+  includes the bandpass shape), and 90 % recovery of slow-drifting signals
+  needs true SNR ~70.
+- `bl_archive.py` — exact archive selection. The archive matches names by
+  prefix (`HIP2` returns 1,982 files of other stars); this keeps exact names,
+  real OFF scans ≥ 0.2° away, one session, one band.
 - `coherence.py` — steady machine or noise-like maser? Passes on synthetic
   signals; on Voyager's real carrier, ~3 % pointing/scintillation jitter makes
   it inconclusive, and the tool says so instead of guessing.
@@ -55,7 +66,7 @@ calibration for everything below.*
   just that 2.9 MHz from the public Green Bank cadence over HTTP. **Null; rules
   out a steady beacon above ~5 GW** aimed at us during those scans
   ([HI_STARFRAME_RESULT.md](HI_STARFRAME_RESULT.md)).
-- **Barnard's Star, full fine-resolution cadence** (77 GB, 1.1–1.9 GHz): 9 events in every ON scan, all explained — Inmarsat/GPS satellites at zero drift, where a real signal must carry Earth's −0.12 Hz/s. **Null** ([GJ699_CADENCE_RESULT.md](GJ699_CADENCE_RESULT.md); `cadence_verdict.py` explains each event).
+- **Barnard's Star, full fine-resolution cadence** (77 GB, 1.1–1.9 GHz): 9 events in every ON scan, all explained — Inmarsat/GPS satellites at zero drift, where a real signal must carry Earth's −0.12 Hz/s. **Null** for slow drifts down to ~56 Jy (~22 GW at 6 ly), injection-measured ([GJ699_CADENCE_RESULT.md](GJ699_CADENCE_RESULT.md); `cadence_verdict.py` explains each event).
 - `laser_lines.py` — optical SETI on 199 Sloan (SDSS DR17) star spectra,
   exposure by exposure. **3 survivors, 2 inside Earth's water-vapour bands**;
   lines ≳ 12×10⁻¹⁷ erg/s/cm² are caught ~89 % of the time where the method can

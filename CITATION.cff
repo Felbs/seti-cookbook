@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+message: "If you use seti-cookbook, please cite it as below, and cite the Breakthrough Listen data and the tools listed under references."
+title: "seti-cookbook: open technosignature searches in Breakthrough Listen public data"
+type: software
+authors:
+  - alias: Felbs
+repository-code: "https://github.com/Felbs/seti-cookbook"
+keywords:
+  - SETI
+  - technosignatures
+  - radio astronomy
+  - Breakthrough Listen
+  - injection-recovery
+references:
+  - type: article
+    title: "The Breakthrough Listen Search for Intelligent Life: Public Data, Formats, Reduction and Archiving"
+    authors:
+      - family-names: Lebofsky
+        given-names: Matthew
+      - name: "et al."
+    journal: "Publications of the Astronomical Society of the Pacific"
+    volume: 131
+    start: 124505
+    year: 2019
+  - type: article
+    title: "The Breakthrough Listen Search for Intelligent Life: Observations of 1327 Nearby Stars over 1.10-3.45 GHz"
+    authors:
+      - family-names: Price
+        given-names: Danny C.
+      - name: "et al."
+    journal: "The Astronomical Journal"
+    volume: 159
+    start: 86
+    year: 2020
+  - type: article
+    title: "The Breakthrough Listen Search for Intelligent Life: 1.1-1.9 GHz Observations of 692 Nearby Stars"
+    authors:
+      - family-names: Enriquez
+        given-names: J. Emilio
+      - name: "et al."
+    journal: "The Astrophysical Journal"
+    volume: 849
+    start: 104
+    year: 2017
+  - type: software
+    title: "turboSETI"
+    authors:
+      - name: "Breakthrough Listen / Berkeley SETI Research Center"
+    repository-code: "https://github.com/UCBerkeleySETI/turbo_seti"
+  - type: article
+    title: "Setigen: Simulating Radio Technosignatures for SETI"
+    authors:
+      - family-names: Brzycki
+        given-names: Bryan
+      - name: "et al."
+    journal: "The Astronomical Journal"
+    volume: 163
+    start: 222
+    year: 2022

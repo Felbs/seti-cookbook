@@ -1,5 +1,7 @@
 # Hunt result: laser lines in 199 Sloan star spectra — 2026-11-06
 
+> **Evidence level E2; 3 survivors at rung 1** — see [EVIDENCE.md](EVIDENCE.md).
+
 **Idea.** A laser aimed at us shows up in a star's spectrum as a needle: a
 line as narrow as the spectrograph allows, at a wavelength where nothing
 natural belongs, steady from one exposure to the next (Townes 1983). The
