@@ -9,6 +9,8 @@ hdf5plugin>=3.0      # BL's bitshuffle filter — without it h5py cannot decompr
 # The BL pipeline (star_sweep.py):
 turbo_seti>=2.3.0    # narrowband drift search (Taylor-tree De-Doppler)
 blimpy>=2.0.0        # read/verify BL filterbank + HDF5 data products
+setuptools<81        # blimpy still imports pkg_resources (removed in setuptools 81)
+# numpy 2.x: run `python tools/patch_turboseti.py` once after installing turbo_seti
 
 # OPTIONAL, and honestly optional — the repo degrades gracefully without each:
 # astropy>=5.0       # barycentric/LSR velocity correction in natural_signals.py

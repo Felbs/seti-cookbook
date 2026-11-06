@@ -84,8 +84,22 @@ def hunt(h5):
             f = ln.split()
             hits.append((float(f[1]), float(f[2]), float(f[3])))  # drift, snr, mhz
     drifts = sorted({round(d, 3) for d, _, _ in hits})
-    # forensics: uniform drift => RFI; varied drift among strong hits => look closer
     n = len(hits)
+    # Can this file resolve drift at all? On BL mid-res (.0002) products one
+    # drift step is ~9.8 Hz/s - wider than a planet's whole range (~0.05-4
+    # Hz/s) - so EVERY hit reports the same drift and "one shared drift rate =
+    # RFI" is void. drift_audit.py demonstrates it with planted signals.
+    import h5py, hdf5plugin  # noqa: F401
+    with h5py.File(h5, "r") as f:
+        a = dict(f["data"].attrs)
+        nt = f["data"].shape[0]
+    quantum = abs(a["foff"]) * 1e6 / ((nt - 1) * a["tsamp"])
+    if quantum > 0.5:
+        verdict = (f"UNRESOLVED: {n} hits, but this file's drift step is {quantum:.1f} Hz/s "
+                   f"- too coarse to tell a planet from RFI. Screening only; "
+                   f"re-run on fine-resolution (.0000) ON/OFF data")
+        return {"hits": n, "unique_drifts": len(drifts), "verdict": verdict}
+    # forensics: uniform drift => RFI; varied drift among strong hits => look closer
     if n == 0:
         verdict = "CLEAN (0 hits) - quiet sky"
     elif len(drifts) <= 2:

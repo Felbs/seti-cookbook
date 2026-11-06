@@ -61,7 +61,8 @@ your neighbours.** *(A sequel, Ozma II, ran 1972–76 on Green Bank's 300-foot d
 over 670 nearby stars. Also nothing.)*
 
 *(seti-cookbook re-observed Epsilon Eridani with modern Breakthrough Listen data
-64 years later — `EPSILON_ERIDANI_RESULT.md`. Nothing.)*
+64 years later — `EPSILON_ERIDANI_RESULT.md`. Nothing found, but that first pass
+used files too coarse to judge drift, so it is a screening, not a clearance.)*
 
 ### The Wow! signal (15 August 1977) — the one that is still open
 

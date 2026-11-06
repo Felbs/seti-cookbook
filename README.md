@@ -22,9 +22,13 @@ calibration for everything below.*
 **The searches**
 - `star_sweep.py` — **point it at a list of nearby stars and walk away.** For
   each target it queries the BL archive, pulls the data, runs turboSETI's drift
-  search, and applies RFI forensics (a real signal drifts at *varied* rates;
-  interference sits at one). Writes a verdict table. Swept 6 neighbors incl.
-  Barnard's Star and Tau Ceti — all RFI, zero candidates (`SWEEP_RESULTS.md`).
+  search, and reports what the file can and cannot tell you. An early sweep of
+  6 neighbours (incl. Barnard's Star and Tau Ceti) called every hit RFI because
+  the hits shared one drift rate — **that verdict was void**: on the mid-res
+  files it used, one drift step (~5–10 Hz/s) is wider than the whole range a
+  planet can produce, so *every* signal reports the same drift.
+  `drift_audit.py` proves it by planting signals with known drifts
+  (`SWEEP_RESULTS.md`). The re-run needs fine-resolution data.
 - `sideband_pairs.py` — the search nobody else runs: post-process turboSETI hit
   lists for **symmetric sideband families sharing a common drift** — the
   signature of a *modulated transmitter* (data!), not just a dead carrier.
@@ -86,6 +90,7 @@ calibration for everything below.*
 ```bash
 pip install -r requirements.txt          # numpy, scipy, turbo_seti, blimpy, h5py...
 # Arch/Omarchy: make a venv first (python -m venv --system-site-packages .venv) - the system python has no pip
+python tools/patch_turboseti.py           # numpy 2: one-line turboSETI fix (idempotent)
 python agent.py selftest                 # prove all 3 novel detectors work (no data)
 python cookbook.py selftest              # prove all 6 recipes work (no data)
 python cookbook.py bench                 # score every recipe, rewrite the leaderboard
@@ -113,6 +118,7 @@ create it for you. Nothing else needs configuring — the tools glob that folder
 ```bash
 # 0. one-time setup
 pip install -r requirements.txt
+python tools/patch_turboseti.py         # numpy 2.x: turboSETI crashes without it
 pip install hdf5plugin                  # REQUIRED: BL files are bitshuffle-
                                         # compressed. Without it h5py fails with
                                         # a cryptic "can't open directory".

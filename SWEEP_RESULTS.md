@@ -1,5 +1,17 @@
 # Nearby-star SETI sweep
 
+> **⚠️ CORRECTION (2026-11-06): the "RFI" verdicts below are VOID.**
+> They rest on "all hits share one or two drift rates, so they are instrumental."
+> On these mid-resolution (.0002) files one drift step is ~9.8 Hz/s (turboSETI
+> reports multiples of ~5.2 Hz/s), wider than the entire range a planet can
+> produce (~0.05–4 Hz/s). So **every** signal, real or not, reports the same
+> drift. `python drift_audit.py data/star_GJ144.h5` plants ten signals with
+> drifts from −3 to +15 Hz/s into the real file: all ten are found, all ten come
+> back at ±5.2 Hz/s, and the old rule would have called all ten RFI. The same
+> test on the fine-resolution Voyager file gets 7/9 drifts right. These targets
+> are **not cleared**; they need a fine-resolution (.0000) ON/OFF re-run.
+
+
 Swept 10 targets (GBT open data, turboSETI + forensics).
 
 | target | hits | drift rates | verdict |
