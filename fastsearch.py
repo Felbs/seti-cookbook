@@ -25,10 +25,11 @@ quotes an SNR ~4x smaller than the radiometer SNR (#1). This search:
      channel-to-channel noise of the bandpass-removed time-summed spectrum,
      exactly what inject.radiometer_noise measures; boxcar rows are divided by
      the measured noise of the same boxcar on that spectrum;
-  6. keeps a hit only if it is the strongest whose TRACK comes within
-     (half-widths + 2) channels of it at any time in the scan (track-crossing
-     suppression; turboSETI instead drops everything within a fixed
-     +-max_drift*T/df channels of a stronger hit);
+  6. suppresses neighbours drift-aware (select_hits): a weaker hit whose track
+     touches a stronger one's (within half-widths + 2 channels at either end, or
+     crossing) is dropped only if its SNR is at most 1.5x what the stronger signal
+     can leak into it during the spectra where they overlap. turboSETI instead
+     drops everything within a fixed +-max_drift*T/df (~406) channels;
   7. writes a turboSETI-compatible .dat (find_event_pipeline reads it) and a
      CSV with detection SNR, power SNR, drift, freq at t=0, coarse channel and
      the local noise around each hit.
@@ -54,7 +55,9 @@ sys.path.insert(0, str(HERE))
 
 BLOCK = 1024          # bandpass block-median width (channels)
 DC_HALF = 1           # blank DC channel +-1
-SUPPRESS_TOL = 2.0    # extra channels in the track-crossing suppression
+SUPPRESS_TOL = 2.0    # extra channels in the track-touch test of the suppression
+N_BANDS = 5           # separate best-per-channel maps for boxcar widths 1, 2-3, 4-7, 8-15, 16+
+GHOST_MARGIN = 1.5    # a touching weaker hit is dropped if snr <= this x what the stronger can leak into it
 MAX_HITS_PER_COARSE = 3000
 SCRUNCH_AT = 8      # scrunch by s = 2^j only while s <= w / SCRUNCH_AT (w = smear in channels)
 SCRUNCH_PHASES = 1  # scrunch phases (offsets of s/phases channels)
@@ -171,11 +174,12 @@ def drift_plan(K, nt, mode="auto"):
                 sc *= 2
         if sc > 1 and k % sc and abs(k) != K:
             continue
-        g = groups.setdefault(sc, ([], []))
+        band = min(N_BANDS - 1, int(np.log2(max(1, w))))
+        g = groups.setdefault((sc, band), ([], []))
         g[0].append(k)
         g[1].append((max(1, int(round(u / sc))) + (SCRUNCH_EXTRA if sc > 1 else 0)) if mode != "1" else 1)
-    return [(sc, np.array(ks, dtype=np.int64), np.array(ws, dtype=np.int64))
-            for sc, (ks, ws) in sorted(groups.items())]
+    return [(sc, band, np.array(ks, dtype=np.int64), np.array(ws, dtype=np.int64))
+            for (sc, band), (ks, ws) in sorted(groups.items())]
 
 
 def noise_for_widths(S, ws):
@@ -303,42 +307,67 @@ def dedoppler(x, ks, sc, widths, sig, how=None):
     return _dd_numpy(x, ks, sc, widths, np.asarray(sig))
 
 
-def select_hits(best, bestk, bestw, thr, nt, local_win=3, cap=MAX_HITS_PER_COARSE):
-    """Local maxima above thr, then greedy track-crossing suppression: a weaker
-    candidate is dropped if its track comes within (half-width_a + half-width_b
-    + SUPPRESS_TOL) channels of an already kept stronger hit's track at the first
-    or last spectrum, or crosses it in between. Returns list of (chan, k, snr) and
-    the number of channels above thr."""
+def candidates(best, thr, local_win=3):
+    """Channels of one best-per-channel map that are >= thr and the local maximum
+    within +-local_win channels."""
+    from scipy.ndimage import maximum_filter1d
     above = np.flatnonzero(best >= thr)
     if above.size == 0:
-        return [], 0
-    from scipy.ndimage import maximum_filter1d
+        return above, 0
     lm = maximum_filter1d(best, size=2 * local_win + 1, mode="constant", cval=-np.inf)
-    cand = above[best[above] >= lm[above]]
-    n_above = int(above.size)
-    order = cand[np.argsort(-best[cand], kind="stable")]
+    return above[best[above] >= lm[above]], int(above.size)
+
+
+def select_hits(c, k, w, snr, nt, cap=MAX_HITS_PER_COARSE):
+    """Greedy, drift-aware track suppression over candidates (arrays: start
+    channel c, drift index k, boxcar width w in channels, detection snr).
+
+    Candidates are taken strongest first. A weaker candidate b TOUCHES a kept
+    hit a if their tracks come within (half-width_a + half-width_b +
+    SUPPRESS_TOL) channels at the first or last spectrum, or cross in between.
+    A touching b is dropped only if it could be a by-product of a: its SNR is at
+    most GHOST_MARGIN x the most a can put into b's track during the spectra
+    where the two overlap,
+        bound = snr_a * (n_overlap / nt) * min(w_a, w_b) / sqrt(w_a * w_b),
+    with n_overlap = ceil(2 (hw_a + hw_b) / |u_a - u_b|) spectra (u in channels per
+    spectrum), nt for parallel tracks. So the same tone found at a neighbouring
+    start or drift is dropped, while an independent narrow carrier that a wide,
+    fast track merely crosses for a spectrum or two is kept.
+    Returns the indices (into the candidate arrays) of the kept hits."""
+    if len(c) == 0:
+        return []
+    order = np.argsort(-np.asarray(snr), kind="stable")
     if order.size > 50 * cap:
         order = order[:50 * cap]
-    c = order.astype(np.float64)
-    u = bestk[order] / (nt - 1)                       # channels per spectrum
-    hw = np.maximum(1, bestw[order]) / 2.0
-    # track centre in spectrum t: c + u (t + 0.5); compare at t = 0 and t = nt - 1
-    a0 = c + 0.5 * u
-    a1 = c + (nt - 0.5) * u
+    cc = np.asarray(c, dtype=np.float64)[order]
+    u = np.asarray(k, dtype=np.float64)[order] / (nt - 1)        # channels per spectrum
+    ww = np.maximum(1, np.asarray(w, dtype=np.float64)[order])
+    hw = ww / 2.0
+    sn = np.asarray(snr, dtype=np.float64)[order]
+    a0 = cc + 0.5 * u                                   # track centre in spectrum t: c + u (t + 0.5)
+    a1 = cc + (nt - 0.5) * u
     alive = np.ones(order.size, bool)
     kept = []
     for i in range(order.size):
         if not alive[i]:
             continue
-        kept.append((int(order[i]), int(bestk[order[i]]), float(best[order[i]])))
+        kept.append(int(order[i]))
         if len(kept) >= cap:
             break
+        alive[i] = False
         d0 = a0 - a0[i]
         d1 = a1 - a1[i]
         cross = np.sign(d0) != np.sign(d1)
+        reach = hw + hw[i] + SUPPRESS_TOL
         dmin = np.where(cross, 0.0, np.minimum(np.abs(d0), np.abs(d1)))
-        alive &= ~(dmin <= hw + hw[i] + SUPPRESS_TOL)
-    return kept, n_above
+        j = np.flatnonzero(alive & (dmin <= reach))
+        if j.size == 0:
+            continue
+        du = np.abs(u[j] - u[i])
+        n_ov = np.where(du < 1e-9, nt, np.clip(np.ceil(2 * (hw[j] + hw[i]) / np.maximum(du, 1e-9)), 1, nt))
+        bound = sn[i] * (n_ov / nt) * np.minimum(ww[i], ww[j]) / np.sqrt(ww[i] * ww[j])
+        alive[j[sn[j] <= GHOST_MARGIN * bound]] = False
+    return kept
 
 
 def local_noise(S, chans, half=4096):
@@ -365,30 +394,30 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
     K = int(np.ceil(max_drift / step - 1e-9))
     x, S = normalise(raw, dc_idx)
     plan = drift_plan(K, nt, widths)
-    best = np.full(nf, -np.inf, dtype=np.float32)
-    bestk = np.zeros(nf, dtype=np.int32)
-    bestw = np.ones(nf, dtype=np.int32)          # boxcar width, full-resolution channels
-    bests = np.ones(nf, dtype=np.int32)          # scrunch factor
-    bestp = np.zeros(nf, dtype=np.int32)         # scrunch phase
-    sig1 = None
+    NB = N_BANDS
+    best = np.full((NB, nf), -np.inf, dtype=np.float32)
+    bestk = np.zeros((NB, nf), dtype=np.int32)
+    bestw = np.ones((NB, nf), dtype=np.int32)          # boxcar width, full-resolution channels
+    bests = np.ones((NB, nf), dtype=np.int32)          # scrunch factor
+    bestp = np.zeros((NB, nf), dtype=np.int32)         # scrunch phase
     noise = {}
     n_drifts = 0
-    for sc, ks, ws in plan:
+    scr = {}
+    for sc, band, ks, ws in plan:
         for ph in ([0] if sc == 1 else list(range(0, sc, max(1, sc // SCRUNCH_PHASES)))):
             if sc == 1:
-                xs, Ss = x, S
-                m = nf
+                xs, Ss, m = x, S, nf
             else:
-                m = ((nf - ph) // sc) * sc
-                xs = x[:, ph:ph + m].reshape(nt, m // sc, sc).sum(2, dtype=np.float32)
-                Ss = xs.sum(0, dtype=np.float64)
-            if (sc, ph) == (sc, 0) or sc == 1:
-                nz = noise_for_widths(Ss, ws)
-                if sc == 1:
-                    sig1 = nz.get(1) or noise_for_widths(S, [1])[1]
-                for w, v in nz.items():
-                    noise[(sc, w)] = v
-                sig = np.array([nz[int(w)] for w in ws])
+                if (sc, ph) not in scr:
+                    m = ((nf - ph) // sc) * sc
+                    xsc = x[:, ph:ph + m].reshape(nt, m // sc, sc).sum(2, dtype=np.float32)
+                    scr[(sc, ph)] = (xsc, xsc.sum(0, dtype=np.float64), m)
+                xs, Ss, m = scr[(sc, ph)]
+            need = [int(v) for v in set(ws.tolist()) if (sc, int(v)) not in noise]
+            if need:
+                for wv, v in noise_for_widths(Ss, need).items():
+                    noise[(sc, wv)] = v
+            sig = np.array([noise[(sc, int(v))] for v in ws])
             b, bk = dedoppler(xs, ks, sc, ws, sig, how)
             n_drifts += len(ks) / sc
             if sc > 1:
@@ -397,29 +426,46 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
             wlut = np.ones(2 * K + 1, dtype=np.int32)
             wlut[ks + K] = ws * sc
             sl = slice(ph, ph + m)
-            upd = b > best[sl]
-            best[sl] = np.where(upd, b, best[sl])
-            bestk[sl] = np.where(upd, bk, bestk[sl])
-            bestw[sl] = np.where(upd, wlut[bk + K], bestw[sl])
-            bests[sl] = np.where(upd, sc, bests[sl])
-            bestp[sl] = np.where(upd, ph, bestp[sl])
-            del xs
-    if sig1 is None:
-        sig1 = noise_for_widths(S, [1])[1]
-    kept, n_above = select_hits(best, bestk, bestw, thr, nt)
-    # a scrunched hit's start is known to its s-channel block: report the block centre
-    rep = [((c - bestp[c]) // bests[c]) * bests[c] + bestp[c] + (bests[c] - 1) / 2.0 for c, _, _ in kept]
-    ln = local_noise(S, [int(r) for r in rep])
+            B = best[band]
+            upd = b > B[sl]
+            B[sl] = np.where(upd, b, B[sl])
+            bestk[band, sl] = np.where(upd, bk, bestk[band, sl])
+            bestw[band, sl] = np.where(upd, wlut[bk + K], bestw[band, sl])
+            bests[band, sl] = np.where(upd, sc, bests[band, sl])
+            bestp[band, sl] = np.where(upd, ph, bestp[band, sl])
+    del scr
+    if (1, 1) not in noise:
+        noise[(1, 1)] = noise_for_widths(S, [1])[1]
+    sig1 = noise[(1, 1)]
+    cb, cc_ = [], []
+    n_above = 0
+    for band in range(NB):
+        ch, na = candidates(best[band], thr)
+        n_above = max(n_above, na)
+        cb.append(np.full(ch.size, band))
+        cc_.append(ch)
+    cb = np.concatenate(cb).astype(int)
+    cc_ = np.concatenate(cc_).astype(int)
+    keep = select_hits(cc_, bestk[cb, cc_], bestw[cb, cc_], best[cb, cc_], nt)
     hits = []
-    for (c, k, snr), ch, lnz in zip(kept, rep, ln):
-        sc = int(bests[c])
-        w = int(bestw[c])
+    picks = [(int(cb[i]), int(cc_[i])) for i in keep]
+    # a scrunched hit's start is known to its s-channel block: report the block centre
+    rep = []
+    for band, c in picks:
+        sc, ph = int(bests[band, c]), int(bestp[band, c])
+        rep.append(((c - ph) // sc) * sc + ph + (sc - 1) / 2.0)
+    ln = local_noise(S, [int(r) for r in rep])
+    for (band, c), ch, lnz in zip(picks, rep, ln):
+        sc = int(bests[band, c])
+        w = int(bestw[band, c])
+        k = int(bestk[band, c])
+        snr = float(best[band, c])
         drift = (k / (nt - 1)) * foff_hz / tsamp       # Hz/s; foff<0 -> k>0 is a negative drift
-        hits.append(dict(ch=float(ch), k=k, drift=float(drift), snr=float(snr),
+        hits.append(dict(ch=float(ch), k=k, drift=float(drift), snr=snr,
                          snr_power=float(snr * noise[(sc, w // sc)] / sig1), w=w, s=sc,
                          local_noise=float(lnz), noise_ratio=float(lnz / sig1)))
     info = dict(K=K, step=step, drift_searched=K * step, sigma1=sig1, n_above=n_above,
-                n_drifts_equiv=round(n_drifts, 1), plan=[(sc, len(ks)) for sc, ks, _ in plan])
+                n_drifts_equiv=round(n_drifts, 1), plan=[(sc, band, len(ks)) for sc, band, ks, _ in plan])
     return hits, info
 
 
@@ -696,10 +742,27 @@ def selftest():
     s_one = np.mean([hb[mb[i]]["snr"] for i in (6, 7) if mb[i] is not None] or [1e-9])
     checks.append(("boxcar raises SNR of a 3.5 Hz/s smeared tone by > 1.5x", s_box > 1.5 * s_one))
 
+    # 3b. suppression: very strong tones leave no ghosts; a weak carrier crossed by
+    #     a strong fast drifter survives
+    rng = np.random.default_rng(13)
+    g = _synthetic(rng, nt, nf, dc=False)
+    strong = [dict(ch=20000.0, drift=0.0, snr=5000), dict(ch=60000.0, drift=-2.0, snr=5000),
+              dict(ch=100000.0, drift=3.5, snr=3000), dict(ch=99850.4, drift=0.0, snr=40)]   # +drift moves to LOWER channels (foff<0)
+    inject.plant(g, foff, ts, strong)
+    hg, _ = search_slab(g, foff, ts, 4.0, 8.0)
+    mg = inject.match(strong, hg, foff, ts, nt)
+    whyg = inject.explain_misses(strong, hg, mg, foff, ts, nt, 4.0)
+    ghosts = len(hg) - sum(j is not None for j in mg)
+    print(f"  strong tones SNR 5000/5000/3000 + weak SNR 40 carrier on the 3.5 Hz/s track: "
+          f"{[w['status'] for w in whyg]}, {ghosts} other hits")
+    checks.append(("strong tones: no ghost hits (<= 2 in 131k channels)", ghosts <= 2))
+    checks.append(("weak carrier crossed by a strong fast drifter is kept", whyg[3]["status"] == "found"))
+    checks.append(("strong tones themselves found", all(w["status"] == "found" for w in whyg[:3])))
+
     # 4. numpy and numba agree (if numba is here), full-res and scrunched rows
     if how == "numba":
         x, S = normalise(d[:, :16384])
-        for sc, ks, ws in drift_plan(381, nt, "auto")[::2]:
+        for sc, _, ks, ws in drift_plan(381, nt, "auto")[::3]:
             xs = x if sc == 1 else x[:, :16384].reshape(nt, -1, sc).sum(2)
             sig = np.ones(len(ks))
             b1, k1 = _dd_numpy(xs, ks[::7], sc, ws[::7], sig)

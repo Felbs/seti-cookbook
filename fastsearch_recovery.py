@@ -89,6 +89,7 @@ def snr90(tables, drift_abs, snrs=SNRS):
     frac = []
     for s in snrs:
         f = n = 0
+        s = int(s) if float(s).is_integer() else s
         for t in tables:
             for sign in ((+1, -1) if drift_abs > 0 else (+1,)):
                 c = t.get(f"{sign * drift_abs:+.2f}|{s:g}")
@@ -116,7 +117,11 @@ def main():
     ap.add_argument("--fs-snr", type=float, help="fastsearch threshold (default: matched to turboSETI's null count)")
     ap.add_argument("--json")
     ap.add_argument("--no-turboseti", action="store_true")
+    ap.add_argument("--snrs", help="comma list of TRUE SNRs (default: the standard grid)")
     a = ap.parse_args()
+    global SNRS
+    if a.snrs:
+        SNRS = [float(v) for v in a.snrs.split(",")]
     import recovery
     data, m = recovery.load(a.npz)
     seg, lo, dc = coarse_segment(data, m)
@@ -128,7 +133,7 @@ def main():
     foff_hz, ts = m["foff"] * 1e6, m["tsamp"]
     print(f"{Path(a.npz).name}: coarse-channel segment {nc} ch from slice ch {lo}; DC at {dc}")
     tmp = Path(tempfile.mkdtemp(prefix="fsrec_"))
-    out = dict(file=Path(a.npz).name, seed=a.seed, per_cell=a.per_cell, nchan=nc, dc=dc)
+    out = dict(file=Path(a.npz).name, seed=a.seed, per_cell=a.per_cell, nchan=nc, dc=dc, snrs=SNRS)
     try:
         # 1. null probes
         t0 = time.time()
@@ -209,15 +214,19 @@ def main():
 
 def summarise(paths):
     """Pool several runs' JSON: 90 %-recovery TRUE SNR per |drift| for each tool."""
-    runs = [json.loads(Path(p).read_text()) for p in paths]
+    runs = []
+    for p in paths:
+        j = json.loads(Path(p).read_text())
+        runs.extend(j["runs"] if "runs" in j else [j])     # one run, or a combined results file
     print(f"{len(runs)} runs: seeds {[r['seed'] for r in runs]}; fastsearch thresholds "
           f"{[r['fs_thr'] for r in runs]}; null hits turboSETI {[r['ts_null'] for r in runs]} "
           f"fastsearch {[r['fs_null'] for r in runs]}")
     tools = sorted({t for r in runs for t in r["tables"]})
+    grid = sorted({float(k.split("|")[1]) for r in runs for t in r["tables"].values() for k in t})
     print("|drift| " + "".join(f"{t:>14s}" for t in tools) + "   ratio")
     rows = {}
     for dr in (0.0, 0.1, 0.5, 1.0, 2.0, 3.5):
-        vals = [snr90([r["tables"][t] for r in runs if t in r["tables"]], dr)[0] for t in tools]
+        vals = [snr90([r["tables"][t] for r in runs if t in r["tables"]], dr, snrs=grid)[0] for t in tools]
         rows[dr] = vals
         ratio = (vals[1] / vals[0]) if len(vals) == 2 and vals[0] and vals[1] else None
         print(f"{dr:6.2f} " + "".join(f"{(f'{v:.0f}' if v else '>max'):>14s}" for v in vals)
