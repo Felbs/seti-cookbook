@@ -26,15 +26,32 @@ SOURCES
 
 EARTH TRANSIT ZONE (Heller & Pudritz 2016, Astrobiology 16, 259)
   From a star at ecliptic latitude |beta| < ~0.264 deg (the paper's value;
-  arcsin(R_sun / 1 au) = 0.2665 deg; `build` reports any star in between), Earth is seen to cross the Sun once a year. Observers there could have found
+  arcsin(R_sun / 1 au) = 0.2665 deg; `build` reports any star in between),
+  Earth is seen to cross the Sun once a year. Observers there could have found
   us the way we find exoplanets, which makes them a natural place to look for
   a deliberate signal. We flag  etz = |beta| < 0.264 deg  and the looser
-  near_etz = |beta| < 2 deg, with beta in astropy's BarycentricTrueEcliptic
-  frame (equinox J2000). Not implemented (only cited, because we could not
-  verify it here): the moving ETZ over +-5,000 yr (Kaltenegger & Faherty 2021,
-  Nature 594, 505) and the SETI-ellipsoid timing idea (Davenport et al. 2022,
-  AJ 164, 117; Nilipour et al. 2023, AJ 166, 79), which needs a reference event
-  and its distance error, not just a position.
+  near_etz = |beta| < 2 deg, with beta of the J2000 position in astropy's
+  BarycentricTrueEcliptic (equinox J2000).
+  etz_years = [enter, exit]: APPROXIMATE years the star is in the zone. Each
+  star is moved by its full space motion (pm, parallax, RV) and beta is taken
+  in the mean ecliptic OF DATE, because the ecliptic itself tilts ~47"/century
+  (~0.06 deg over Teegarden's ~450-yr window: a fixed J2000 ecliptic puts its
+  exit at 2453 instead of 2496). Horizon 1000-3000 (null = beyond); no
+  light-travel-time term. Check: Teegarden's Star comes out 2048-2498 (5-yr
+  grid); published 2044-2496 (Zechmeister et al. 2019, A&A 627, A49) and entry
+  ~2050 ("in 29 years" from 2021: Kaltenegger & Faherty 2021, Nature 594, 505).
+  Not implemented (only cited): K&F's +-5,000-yr moving-ETZ census and the
+  SETI-ellipsoid timing idea (Davenport et al. 2022, AJ 164, 117; Nilipour et
+  al. 2023, AJ 166, 79), which needs a reference event and its distance error.
+
+ALREADY SEARCHED BY BL (bl_published_search)
+  An archive cadence is data BL has usually ALREADY SEARCHED and published:
+  Enriquez et al. 2017 (ApJ 849, 104; 692 stars, L-band), Price et al. 2020
+  (AJ 159, 86; 1,327 stars, L/S-band + Parkes) and Sheikh et al. 2020 (AJ 160,
+  29; 20 restricted-ETZ stars, C-band, incl. HIP 3765). Each star records
+  which of these target lists name it. These are not unexplored stars; what
+  this repo can add is a RE-search with injection-calibrated, true-radiometer-
+  SNR limits that include drift 0.
 
 PRIORITY SCORE (simple on purpose; every term is in targets.json)
     score = 40*etz + 10*near_etz_only + 25*bl_cadence + 20*closeness - 30*searched
@@ -47,15 +64,21 @@ PRIORITY SCORE (simple on purpose; every term is in targets.json)
       closeness      max(0, 1 - distance_ly / 100)
       searched       1 if this repo already has an E1-or-better search (EVIDENCE.md);
                      VOID and E0 results do not count
-  Stars whose archive cadence was NOT checked score bl_cadence = 0; the
-  `bl.checked` / `bl.abacad_checked` fields say which.
+  bl_cadence has three states (field `bl_cadence`): yes = 1, no = 0 (checked,
+  or no exact archive name), unchecked = 0.5, so an unchecked star is not
+  ranked as if it had no data.
 
 WHAT WAS CHECKED (2026-11-06 build): archive names for all 1,709 stars (one
 list-targets call); file lists for 375 stars (every near-ETZ star, the nearest
 100, and every star with a <name>_OFF target); ABACAD time-window queries for
-the near-ETZ stars and the nearest 100 (126 stars with fine-res ON scans).
+every one of those with fine-res ON scans (369 stars; 0 truncated windows).
+812 stars with an exact archive name were not file-list checked: their
+bl_cadence is "unchecked" (`build --check-all` would check them).
 Everything is cached in data/targets_raw/ (gitignored); `build --offline`
 rebuilds targets.json from it byte for byte.
+
+WHAT THIS IS: archive and catalogue metadata. No signal search was run; this
+is not an E-level result (EVIDENCE.md).
 """
 import argparse
 import csv
@@ -309,6 +332,82 @@ def bl_rows(token, offline=False, limit=20000):
     return rows, len(rows) >= limit
 
 
+# ------------------------------------------- BL's own published searches
+# Being in the archive is not being unexplored: BL has PUBLISHED searches of
+# many of these stars. We record which paper's target list names each star so
+# nobody mistakes a re-search for new sky. Our added value on such a star is a
+# RE-search: injection-calibrated, true-radiometer-SNR limits, drift 0 included.
+SHEIKH2020 = ("Sheikh et al. 2020, AJ 160, 29 (restricted-ETZ search, GBT C-band 3.95-8 GHz)",
+              # Table 1, 20 targets, copied from arXiv:2002.06162
+              ["HIP3765", "HIP95417", "HIP64688", "HIP34271", "HIP33497", "HIP15381", "HIP9607",
+               "HIP43418", "HIP83662", "HD174995", "HIP111332", "HIP118159", "HIP16136", "HIP88631",
+               "HIP46339", "HIP109656", "HIP82986", "HIP61349", "HIP65642", "HIP19054"])
+ENRIQUEZ2017 = ("Enriquez et al. 2017, ApJ 849, 104 (692 stars, GBT L-band 1.1-1.9 GHz)",
+                "https://seti.berkeley.edu/lband2017/692stars.csv")
+PRICE2020 = ("Price et al. 2020, AJ 159, 86 (1,327 stars; GBT L, GBT S, Parkes 10-cm)",
+             "https://seti.berkeley.edu/listen2019/listen2019_tables.pdf")
+
+
+def _norm(name):
+    return re.sub(r"\s+", "", name or "").upper()
+
+
+def fetch_published(offline=False):
+    """{paper: {normalised star name: [bands]}} from BL's published target lists,
+    cached in data/targets_raw/published/. The Price 2020 tables are a PDF and
+    need `pdftotext` (poppler) the first time; without it that paper is skipped
+    and meta says so."""
+    import shutil
+    import subprocess
+    d = RAW / "published"
+    d.mkdir(parents=True, exist_ok=True)
+    out = {SHEIKH2020[0]: {_norm(x): ["C"] for x in SHEIKH2020[1]}}
+    p = d / "692stars.csv"
+    if not p.exists() and not offline:
+        p.write_text(_get(ENRIQUEZ2017[1], timeout=90))
+    if p.exists():
+        out[ENRIQUEZ2017[0]] = {_norm(l.split(",")[0]): ["L"] for l in p.read_text().splitlines()
+                                if l.strip()}
+    t = d / "listen2019_tables.txt"
+    if not t.exists() and not offline and shutil.which("pdftotext"):
+        pdf = d / "listen2019_tables.pdf"
+        if not pdf.exists():
+            req = urllib.request.Request(PRICE2020[1], headers={"User-Agent": "seti-cookbook targets.py"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                pdf.write_bytes(r.read())
+        subprocess.run(["pdftotext", "-layout", str(pdf), str(t)], check=True, capture_output=True)
+    if t.exists():
+        out[PRICE2020[0]] = parse_price2020(t.read_text())
+    return out
+
+
+def parse_price2020(txt):
+    """'Table N. Observation listing, <band>' headings, then 'Target MJD ...' rows."""
+    band, got = None, {}
+    for l in txt.splitlines():
+        m = re.search(r"Observation listing,\s*(.+?)\s*$", l)
+        if m:
+            band = {"L-band": "L", "S-band": "S"}.get(m.group(1), m.group(1))
+            continue
+        m = re.match(r"\s*(\S+)\s+(5\d{4}\.\d+)\s", l)
+        if m and band:
+            b = got.setdefault(_norm(m.group(1)), [])
+            if band not in b:
+                b.append(band)
+    return got
+
+
+def published_for(names, pub):
+    """[{paper, bands}] for every published BL list naming any of `names`."""
+    keys = {_norm(n) for n in names if n}
+    res = []
+    for paper, table in pub.items():
+        bands = sorted({b for k in keys for b in table.get(k, [])})
+        if bands:
+            res.append(dict(paper=paper, bands=bands))
+    return res
+
+
 # ----------------------------------------------------------------- physics
 def ecliptic_lat(ra_deg, dec_deg):
     """Barycentric true ecliptic latitude (deg, equinox J2000). Vectorised."""
@@ -332,8 +431,10 @@ def ecliptic_to_icrs(lon_deg, lat_deg):
 
 
 def etz_window(beta, rate_per_century, horizon=5000):
-    """[enter, exit] calendar years of the ETZ crossing for linear motion in beta
-    (J2000 = year 2000), clipped to +-horizon years; None if never inside."""
+    """[enter, exit] years for LINEAR motion in beta against a FIXED J2000
+    ecliptic. Kept only as a comparison: it ignores the motion of the ecliptic
+    itself (~47 arcsec/century) and is ~40 yr off for Teegarden's Star.
+    build() uses etz_years_of_date() instead."""
     if abs(rate_per_century) < 1e-12:
         return [None, None] if abs(beta) < ETZ_DEG else None
     t1 = (-ETZ_DEG - beta) / rate_per_century * 100
@@ -342,6 +443,79 @@ def etz_window(beta, rate_per_century, horizon=5000):
     if hi < -horizon or lo > horizon:
         return None
     return [round(2000 + lo) if lo > -horizon else None, round(2000 + hi) if hi < horizon else None]
+
+
+NOW_YEAR = 2026.85              # epoch of ecl_lat_deg_now (this build, Nov 2026), fixed so builds reproduce
+ETZ_YEARS = (1000.0, 3000.0)    # horizon of etz_years: +-1,000 yr around J2000
+ETZ_STEP_YR = 5.0
+
+
+def beta_track(ra, dec, pmra_mas, pmdec_mas, plx_mas, rv_kms, years, of_date=True):
+    """Ecliptic latitude (deg), shape (n_stars, n_years), of each star moved by its
+    full space motion (astropy apply_space_motion, epoch J2000), in the MEAN
+    ecliptic OF DATE (of_date=True: the plane Earth orbits in that year, IAU 2006
+    precession) or in the fixed J2000 ecliptic (of_date=False).
+    pmra_mas is pm_ra*cos(dec), as SIMBAD gives it. Missing pm/rv -> 0; missing
+    parallax -> 10 pc (only the RV/perspective term depends on it)."""
+    import warnings
+    import numpy as np
+    from astropy import units as u
+    from astropy.coordinates import SkyCoord, BarycentricMeanEcliptic
+    from astropy.time import Time
+
+    def arr(x, fill):
+        a = np.array([fill if v is None else v for v in np.atleast_1d(x)], dtype=float)
+        return np.where(np.isfinite(a), a, fill)
+    plx = arr(plx_mas, 100.0)
+    plx = np.where(plx > 0, plx, 100.0)
+    c = SkyCoord(ra=arr(ra, 0) * u.deg, dec=arr(dec, 0) * u.deg,
+                 pm_ra_cosdec=arr(pmra_mas, 0) * u.mas / u.yr, pm_dec=arr(pmdec_mas, 0) * u.mas / u.yr,
+                 distance=(1000.0 / plx) * u.pc, radial_velocity=arr(rv_kms, 0) * u.km / u.s,
+                 obstime=Time("J2000"), frame="icrs")
+    out = np.empty((len(c), len(years)))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")      # ERFA "dubious year" for epochs far from now
+        for j, y in enumerate(years):
+            t = Time(float(y), format="jyear")
+            frame = BarycentricMeanEcliptic(equinox=t if of_date else Time("J2000"))
+            out[:, j] = c.apply_space_motion(new_obstime=t).transform_to(frame).lat.deg
+    return out
+
+
+def etz_years_from_track(years, beta):
+    """[enter, exit] (rounded years) of the first stretch with |beta| < ETZ_DEG,
+    linearly interpolated between grid points; None for an end beyond the
+    horizon; None (no list) if never inside within the horizon."""
+    import numpy as np
+    inside = np.abs(beta) < ETZ_DEG
+    if not inside.any():
+        return None
+    i0 = int(np.argmax(inside))
+    i1 = i0
+    while i1 + 1 < len(inside) and inside[i1 + 1]:
+        i1 += 1
+
+    def cross(a, b):        # year where |beta| = ETZ_DEG between grid points a (inside) and b
+        fa, fb = abs(beta[a]) - ETZ_DEG, abs(beta[b]) - ETZ_DEG
+        return years[a] + (years[b] - years[a]) * fa / (fa - fb)
+    enter = None if i0 == 0 else round(float(cross(i0, i0 - 1)))
+    leave = None if i1 == len(inside) - 1 else round(float(cross(i1, i1 + 1)))
+    return [enter, leave]
+
+
+def beta_rate_analytic(ra, dec, pmra_mas, pmdec_mas, eps_deg=23.4392794):
+    """d(beta)/dt in deg/century for pure proper motion, fixed J2000 ecliptic,
+    from vectors (no astropy): z = sin(beta) = r . k, k = ecliptic pole in ICRS."""
+    a, d = math.radians(ra), math.radians(dec)
+    east = (-math.sin(a), math.cos(a), 0.0)
+    north = (-math.sin(d) * math.cos(a), -math.sin(d) * math.sin(a), math.cos(d))
+    mas = math.radians(1 / 3.6e6)
+    v = [pmra_mas * mas * e + pmdec_mas * mas * n for e, n in zip(east, north)]
+    k = (0.0, -math.sin(math.radians(eps_deg)), math.cos(math.radians(eps_deg)))
+    r = (math.cos(d) * math.cos(a), math.cos(d) * math.sin(a), math.sin(d))
+    z = sum(x * y for x, y in zip(r, k))
+    dz = sum(x * y for x, y in zip(v, k))
+    return math.degrees(dz / math.sqrt(1 - z * z)) * 100
 
 
 def etz_flags(beta):
@@ -408,19 +582,26 @@ def bl_check(token, names, offline=False):
 BL_FILES = "http://seti.berkeley.edu/opendata/api/query-files"
 
 
+WINDOW_LIMIT = 2000
+
+
 def window_rows(mjd0, mjd1, offline=False, cache_key=None):
+    """Every archive row (any name) in [mjd0, mjd1], cached. Returns
+    (rows, truncated); a reply that fills WINDOW_LIMIT may have dropped scans."""
     d = RAW / "bl_window"
     d.mkdir(parents=True, exist_ok=True)
     path = d / ((cache_key or f"{mjd0:.5f}_{mjd1:.5f}") + ".json")
     if not path.exists():
         if offline:
-            return None
+            return None, False
         q = urllib.parse.urlencode({"target": "%", "time-start": f"{mjd0:.6f}",
-                                    "time-end": f"{mjd1:.6f}", "file-types": "HDF5", "limit": 2000})
+                                    "time-end": f"{mjd1:.6f}", "file-types": "HDF5",
+                                    "limit": WINDOW_LIMIT})
         rows = json.loads(_get(BL_FILES + "?" + q, timeout=90)).get("data", [])
         path.write_text(json.dumps(rows))
         time.sleep(0.5)
-    return json.loads(path.read_text())
+    rows = json.loads(path.read_text())
+    return rows, len(rows) >= WINDOW_LIMIT
 
 
 def abacad(token, star_rows, window, prod="0000"):
@@ -456,6 +637,8 @@ def abacad(token, star_rows, window, prod="0000"):
             seps = [bl_archive.sep_deg(ra0, de0, x["ra"], x["dec"]) for x in w if x["kind"] == "OFF"]
             if max(gaps) > bl_archive.MAX_GAP_MIN or min(seps) < bl_archive.MIN_OFF_DEG:
                 continue
+            if all(x["target"] == token + "_OFF" for x in w if x["kind"] == "OFF"):
+                break       # a <name>_OFF cadence: bl_archive.cadences reports it; don't count it twice
             found.append(dict(kind="ABACAD-other-OFFs", project=proj, mjd_day=day, fc_mhz=fc,
                               band=band_of(fc), telescope=w[0]["telescope"],
                               gb=round(sum(x["size"] for x in w) / 1e9, 1),
@@ -467,29 +650,51 @@ def abacad(token, star_rows, window, prod="0000"):
 
 
 def abacad_check(token, offline=False):
+    """(cadences, n_truncated_windows), or (None, 0) if not checkable offline.
+    A truncated time window is never used to build a cadence."""
     import bl_archive
     rows, _ = bl_rows(token, offline=offline)
     if rows is None:
-        return None
+        return None, 0
     ons = [x for x in bl_archive.scans(token, rows, "0000") if x["kind"] == "ON"]
-    out = []
+    out, n_trunc = [], 0
     for key in sorted({(x["project"], x["day"], x["fc"]) for x in ons}):
         g = [x for x in ons if (x["project"], x["day"], x["fc"]) == key]
         m0, m1 = min(x["mjd"] for x in g) - 2 / 1440, max(x["mjd"] for x in g) + 25 / 1440
         ck = re.sub(r"[^A-Za-z0-9._+-]", "_", f"{token}_{key[0]}_{key[1]}_{key[2]}")
-        win = window_rows(m0, m1, offline, ck)
+        win, trunc = window_rows(m0, m1, offline, ck)
         if win is None:
-            return None
+            return None, 0
+        if trunc:
+            n_trunc += 1
+            continue
         out += abacad(token, rows, win)
-    return out
+    return out, n_trunc
 
 
 # ----------------------------------------------------------------- score
+def cadence_state(s):
+    """'yes' (a valid fine-res cadence of either kind), 'no' (checked: none of
+    either kind, or no exact archive name), 'unchecked' (not looked at)."""
+    bl = s.get("bl", {})
+    if bl.get("cadences") or bl.get("abacad"):
+        return "yes"
+    if not s.get("bl_token"):
+        return "no" if bl.get("why") == "no exact archive name" or bl.get("checked") else "unchecked"
+    if not bl.get("checked"):
+        return "unchecked"
+    if not bl.get("fine_scans"):
+        return "no"              # no fine-res ON scan at all: neither kind can exist
+    return "no" if bl.get("abacad_checked") and not bl.get("abacad_truncated") else "unchecked"
+
+
+CADENCE_CREDIT = {"yes": 1.0, "no": 0.0, "unchecked": 0.5}
+
+
 def score(s):
-    beta = s.get("ecl_lat_deg")
     etz = bool(s.get("etz"))
     near_only = bool(s.get("near_etz")) and not etz
-    cad = bool(s.get("bl", {}).get("cadences")) or bool(s.get("bl", {}).get("abacad"))
+    cad = CADENCE_CREDIT[cadence_state(s)]
     d = s.get("distance_ly")
     close = max(0.0, 1.0 - d / 100.0) if d else 0.0
     searched = OUR_SEARCHES.get(s.get("bl_token") or s["star"]) in SEARCHED_LEVELS \
@@ -546,51 +751,94 @@ def build(offline=False, check_all=False):
         twins = [x for x in by_oid.get(e["simbad_oid"], []) if x != e["star"]]
         e["same_simbad_object_as"] = twins or None
     beta = ecliptic_lat(np.array([e["ra"] for e in out]), np.array([e["dec"] for e in out]))
-    # proper motion moves a star across the ETZ edge: beta 100 years on (linear, small angle)
-    cosd = np.cos(np.radians([e["dec"] for e in out]))
-    pmra = np.array([(e["pmra_mas_yr"] or 0.0) for e in out]) / 3.6e6
-    pmde = np.array([(e["pmdec_mas_yr"] or 0.0) for e in out]) / 3.6e6
-    beta100 = ecliptic_lat(np.array([e["ra"] for e in out]) + 100 * pmra / np.maximum(cosd, 1e-6),
-                           np.array([e["dec"] for e in out]) + 100 * pmde)
-    for e, b, b100 in zip(out, beta, beta100):
+    # Stars move across the ETZ edge, and so does the ecliptic itself. Propagate
+    # each star with its full space motion and take beta in the ecliptic OF DATE.
+    args = ([e["ra"] for e in out], [e["dec"] for e in out], [e["pmra_mas_yr"] for e in out],
+            [e["pmdec_mas_yr"] for e in out], [e["parallax_mas"] for e in out],
+            [e["rv_km_s"] for e in out])
+    years = np.arange(ETZ_YEARS[0], ETZ_YEARS[1] + ETZ_STEP_YR / 2, ETZ_STEP_YR)
+    track = beta_track(*args, years)
+    fixed = beta_track(*args, [2000.0, 2100.0], of_date=False)
+    now = beta_track(*args, [NOW_YEAR])[:, 0]
+    for k, (e, b) in enumerate(zip(out, beta)):
         e["ecl_lat_deg"] = round(float(b), 5)
-        e["ecl_lat_deg_per_century"] = round(float(b100 - b), 5)
+        e["ecl_lat_deg_now"] = round(float(now[k]), 5)
+        e["ecl_lat_deg_per_century"] = round(float(fixed[k, 1] - fixed[k, 0]), 5)
         e.update(etz_flags(float(b)))
-        e["etz_years"] = etz_window(float(b), float(b100 - b))
+        e["etz_years"] = etz_years_from_track(years, track[k])
 
     names = fetch_bl_list(offline)
+    pub = fetch_published(offline)
     nearest = sorted((e for e in out if e["distance_ly"]), key=lambda e: e["distance_ly"])[:100]
     near_set = {id(e) for e in nearest}
     for e in out:
-        cands = token_candidates(e["star"], e.pop("_ids"))
+        ids = e.pop("_ids")
+        cands = token_candidates(e["star"], ids)
         e["bl_token"] = resolve_token(cands, names) if names is not None else None
         e["bl_token_tried"] = cands
         want = check_all or e["near_etz"] or id(e) in near_set or \
             (e["bl_token"] and (e["bl_token"] + "_OFF") in names)
         if e["bl_token"] and want:
             e["bl"] = bl_check(e["bl_token"], names, offline)
-            if (e["near_etz"] or id(e) in near_set or check_all) and e["bl"].get("fine_scans"):
-                ab = abacad_check(e["bl_token"], offline)
+            if e["bl"].get("fine_scans"):        # every checked star with fine-res ON scans
+                ab, n_trunc = abacad_check(e["bl_token"], offline)
                 e["bl"]["abacad_checked"] = ab is not None
                 e["bl"]["abacad"] = ab or []
+                e["bl"]["abacad_truncated"] = n_trunc
         else:
             e["bl"] = dict(checked=False,
                            why=("no exact archive name" if not e["bl_token"] and names is not None
                                 else "not in the checked subset"))
+        e["bl_cadence"] = cadence_state(e)
+        e["bl_published_search"] = published_for(
+            [e["star"], e["bl_token"]] + cands + [x for x in ids if x.startswith("HD ")], pub) or None
         e["score"], e["score_parts"] = score(e)
         e["our_search"] = OUR_SEARCHES.get(e["bl_token"] or e["star"])
 
     n_etz = sum(e["etz"] for e in out)
+    usable = [e for e in out if e["bl_cadence"] == "yes"]
+
+    def files_of(e):
+        return {tuple(c["files"]) for c in (e["bl"].get("cadences") or []) + (e["bl"].get("abacad") or [])}
     meta = dict(
+        evidence="archive and catalogue METADATA only: no signal search was run on any of these "
+                 "cadences (not an E-level result; EVIDENCE.md). Each GBT fine-res cadence is "
+                 "~47-106 GB (ETZ stars: 93-104 GB) and none has been downloaded.",
         catalogue=CATALOGUE, catalogue_ref=CATALOGUE_REF, n_stars=len(out),
         astrometry="SIMBAD TAP basic (ICRS, J2000 epoch); distance from SIMBAD parallax, "
                    "else Isaacson Dist",
         etz_deg=round(ETZ_DEG, 4), near_etz_deg=NEAR_ETZ_DEG,
-        ecliptic_frame="astropy BarycentricTrueEcliptic, equinox J2000",
-        score_formula="40*etz + 10*near_etz_only + 25*bl_cadence + 20*max(0,1-d_ly/100) - 30*searched(E1+)",
+        ecliptic_frame="etz/near_etz/ecl_lat_deg: astropy BarycentricTrueEcliptic, equinox J2000, "
+                       "J2000 positions. ecl_lat_deg_now: mean ecliptic of date at "
+                       f"{NOW_YEAR}, star moved by its space motion.",
+        etz_years="[enter, exit] years with |beta| < etz_deg, APPROXIMATE: full space motion "
+                  "(astropy apply_space_motion: pm, parallax, RV) in the MEAN ECLIPTIC OF DATE "
+                  f"(IAU 2006 precession), {ETZ_STEP_YR:g}-yr grid interpolated, horizon "
+                  f"{ETZ_YEARS[0]:g}-{ETZ_YEARS[1]:g} (null = beyond it). No light-travel-time "
+                  "term. Teegarden's Star: 2049-2498 vs published 2044-2496 (Zechmeister 2019) "
+                  "and ~2050 entry (Kaltenegger & Faherty 2021).",
+        ecl_lat_deg_per_century="pure stellar motion, fixed J2000 ecliptic (2100 minus 2000)",
+        score_formula="40*etz + 10*near_etz_only + 25*bl_cadence + 20*max(0,1-d_ly/100) - 30*searched(E1+); "
+                      "bl_cadence = 1 yes / 0 no / 0.5 unchecked",
         bl_checked_subset="near-ETZ stars + nearest 100 + every star whose <token>_OFF is an archive "
-                          "target name; fine-res product 0000; bl_archive.cadences rules",
+                          "target name; fine-res product 0000; bl_archive.cadences rules; ABACAD "
+                          "(other-star OFFs) finder for every checked star with fine-res ON scans",
+        bl_published_search="which BL papers' published target lists name the star: "
+                            + "; ".join(pub) + (" (Price 2020 NOT checked: pdftotext missing)"
+                                                if PRICE2020[0] not in pub else "")
+                            + ". Our value on these stars is a RE-search (injection-calibrated, "
+                              "true radiometer SNR, drift 0), not new targets.",
         counts=dict(etz=n_etz,
+                    etz_now_of_date=sum(abs(e["ecl_lat_deg_now"]) < ETZ_DEG for e in out),
+                    bl_cadence_states={k: sum(e["bl_cadence"] == k for e in out)
+                                       for k in ("yes", "no", "unchecked")},
+                    usable_unique_tokens=len({e["bl_token"] for e in usable}),
+                    usable_unique_cadences=len(set().union(*[files_of(e) for e in usable]) if usable else set()),
+                    abacad_truncated_windows=sum(e["bl"].get("abacad_truncated", 0) for e in out),
+                    etz_with_published_bl_search=sum(bool(e["bl_published_search"]) and e["etz"] for e in out),
+                    near_etz_with_published_bl_search=sum(bool(e["bl_published_search"]) and e["near_etz"]
+                                                          for e in out),
+                    with_published_bl_search=sum(bool(e["bl_published_search"]) for e in out),
                     etz_borderline_0264_02665=sum(ETZ_DEG <= abs(e["ecl_lat_deg"]) < 0.2665 for e in out), near_etz=sum(e["near_etz"] for e in out),
                     unique_simbad_objects=len({e["simbad_oid"] for e in out if e["simbad_oid"]}),
                     repeated_star_names=sum(c > 1 for c in __import__("collections").Counter(
@@ -641,13 +889,34 @@ def _find(stars, name):
     return None
 
 
+# Teegarden's Star (SO0253) ETZ window, published:
+#   Zechmeister et al. 2019, A&A 627, A49: in the ETZ from 2044 to 2496
+#   Kaltenegger & Faherty 2021, Nature 594, 505: "in 29 years" from 2021, i.e. ~2050
+TEEGARDEN_PUBLISHED = dict(zechmeister2019=[2044, 2496], kaltenegger_faherty2021_entry=2050)
+TEEGARDEN_TOL_YR = 8
+
+
+def teegarden_check(of_date, linear_j2000):
+    """Both ends against the literature. The two papers differ by 6 yr on entry,
+    so the entry is checked against each and must fall between/near them."""
+    z, kf = TEEGARDEN_PUBLISHED["zechmeister2019"], TEEGARDEN_PUBLISHED["kaltenegger_faherty2021_entry"]
+    en, ex = (of_date or [None, None])
+    ok = bool(en and ex and min(z[0], kf) - TEEGARDEN_TOL_YR <= en <= max(z[0], kf) + TEEGARDEN_TOL_YR
+              and abs(ex - z[1]) <= TEEGARDEN_TOL_YR)
+    return dict(star="SO0253", what="Teegarden's Star ETZ window, ecliptic of date",
+                published=TEEGARDEN_PUBLISHED, found=True, got=of_date,
+                entry_minus_zechmeister=en - z[0] if en else None,
+                entry_minus_kf=en - kf if en else None,
+                exit_minus_zechmeister=ex - z[1] if ex else None,
+                linear_fixed_j2000_ecliptic=linear_j2000, tolerance_yr=TEEGARDEN_TOL_YR, ok=ok)
+
+
 def crosscheck(stars):
     res = []
-    t = _find(stars, "SO0253")      # Kaltenegger & Faherty 2021: Teegarden's Star enters the ETZ in 2044
+    t = _find(stars, "SO0253")
     if t:
-        y = (t.get("etz_years") or [None])[0]
-        res.append(dict(star="SO0253", what="Teegarden's Star ETZ entry year (K&F 2021: 2044)",
-                        found=True, got=y, ok=bool(y and abs(y - 2044) <= 3)))
+        res.append(teegarden_check(t.get("etz_years"),
+                                   etz_window(t["ecl_lat_deg"], t["ecl_lat_deg_per_century"])))
     for ref in REFERENCE:
         e = _find(stars, ref["star"])
         if not e:
@@ -669,7 +938,9 @@ def load():
 
 def line(e):
     cad = (e["bl"].get("cadences") or []) + (e["bl"].get("abacad") or [])
-    bands = ",".join(sorted({c["band"] for c in cad})) or ("-" if e["bl"].get("checked") else "?")
+    state = e.get("bl_cadence") or cadence_state(e)
+    bands = ",".join(sorted({c["band"] for c in cad})) if state == "yes" else \
+        ("-" if state == "no" else "unchecked")
     label = e.get("common") or (e.get("simbad_main_id") or "").replace("NAME ", "")
     return (f"{e['score']:6.1f}  {e['star']:<10} {label:<18.18} "
             f"{(e['distance_ly'] or 0):7.2f} ly  beta {e['ecl_lat_deg']:+8.3f}"
@@ -702,7 +973,13 @@ def etz():
           f"{m['counts']['near_etz']} within {m['near_etz_deg']} deg")
     for e in rows:
         print(line(e))
+        for p in e.get("bl_published_search") or []:
+            print(f"        published BL search: {p['paper'].split(' (')[0]} ({'/'.join(p['bands'])})")
+        seen = set()
         for c in (e["bl"].get("cadences") or []) + (e["bl"].get("abacad") or []):
+            if tuple(c["files"]) in seen:
+                continue
+            seen.add(tuple(c["files"]))
             offs = f", OFFs {'/'.join(c['off_targets'])}" if c.get("off_targets") else ", OFFs <name>_OFF"
             print(f"        {c['telescope']} {c['project']} MJD {c['mjd_day']} {c['band']}-band "
                   f"fc {c['fc_mhz']} MHz, {c['gb']} GB{offs}")
@@ -749,8 +1026,36 @@ def selftest():
     checks.append(("ecliptic north pole is RA 18h, Dec +66.56", abs(pole[0] - 270) < 0.01 and abs(pole[1] - 66.56) < 0.01))
     checks.append(("beta 0.25 in, 0.28 out (ETZ = 0.264 deg)",
                    etz_flags(b[2])["etz"] and not etz_flags(b[3])["etz"] and ETZ_DEG == 0.264))
-    checks.append(("ETZ window: beta 0.32 moving -0.13/century enters ~2044",
-                   etz_window(0.321, -0.129)[0] == 2044 and etz_window(5.0, 0.001) is None))
+    checks.append(("etz_window arithmetic (linear, fixed ecliptic): 0.321 at -0.129/century",
+                   etz_window(0.321, -0.129) == [2044, 2453] and etz_window(5.0, 0.001) is None))
+    import numpy as np
+    yrs = np.arange(1000.0, 3001.0, 5.0)
+    checks.append(("etz_years_from_track: linear beta crosses at 1600 and 2400; edges -> None",
+                   etz_years_from_track(yrs, 0.264 * (2000 - yrs) / 400) == [1600, 2400]
+                   and etz_years_from_track(yrs, 0.0 * yrs) == [None, None]
+                   and etz_years_from_track(yrs, 1.0 + 0.0 * yrs) is None))
+    # proper-motion propagation vs an analytic vector formula, at HIGH declination
+    # (a missing or extra cos(dec) doubles the rate at dec +60 and fails this)
+    hi = [(30.0, 60.0, 4000.0, -3000.0), (250.0, -70.0, -2500.0, 1500.0), (164.12, 7.01, -3866.3, -2699.2)]
+    bt = beta_track([h[0] for h in hi], [h[1] for h in hi], [h[2] for h in hi], [h[3] for h in hi],
+                    [100.0] * 3, [0.0] * 3, [2000.0, 2100.0], of_date=False)
+    an = [beta_rate_analytic(*h) for h in hi]
+    checks.append(("beta change per century = analytic vector formula (dec +60, -70, +7)",
+                   all(abs((bt[k, 1] - bt[k, 0]) - an[k]) < 1e-3 * max(1.0, abs(an[k])) + 2e-4
+                       for k in range(3)) and all(abs(a) > 0.01 for a in an)))
+    # precession control: a star that does not move still drifts in the ecliptic OF DATE
+    st = beta_track([123.0], [20.0], [0.0], [0.0], [100.0], [0.0], [1000.0, 2000.0, 3000.0])
+    sf = beta_track([123.0], [20.0], [0.0], [0.0], [100.0], [0.0], [1000.0, 3000.0], of_date=False)
+    checks.append(("motionless star: fixed-ecliptic beta constant; ecliptic of date moves 0.05-0.3 deg/2000 yr",
+                   abs(sf[0, 1] - sf[0, 0]) < 1e-6 and 0.05 < abs(st[0, 2] - st[0, 0]) < 0.3))
+    # Teegarden's Star from SIMBAD astrometry vs the LITERATURE (independent of this code)
+    tg = beta_track([43.253716], [16.881287], [3429.083], [-3805.541], [260.9884], [63.0], yrs)
+    tg_w = etz_years_from_track(yrs, tg[0])
+    tc = teegarden_check(tg_w, [2044, 2453])
+    checks.append((f"Teegarden ETZ window {tg_w} vs Zechmeister 2019 2044-2496, K&F 2021 ~2050",
+                   tc["ok"]))
+    checks.append(("Teegarden: fixed-J2000 linear exit (2453) misses 2496 by > tolerance (precession matters)",
+                   not teegarden_check([2044, 2453], None)["ok"]))
     checks.append(("beta -1.5 near-ETZ only", etz_flags(b[4])["near_etz"] and not etz_flags(b[4])["etz"]))
     # Barnard's Star: beta ~ +28 deg (well off the ecliptic) - control that must NOT fire
     bb = ecliptic_lat([rows[0]["ra"]], [rows[0]["dec"]])[0]
@@ -765,9 +1070,10 @@ def selftest():
     checks.append(("SIMBAD row: identifier, then position, else catalogue",
                    r0["main_id"].endswith("star") and "identifier" in src0 and r1["main_id"] == "Teegarden"
                    and "nearest" in src1 and r2 is None and src2.startswith("Isaacson")))
-    # Prefix trap: archive has HIP28614/HIP2_x but NOT HIP2 -> no token
-    names = {"HIP28614", "HIP24284", "HIP2_S", "GJ699", "GJ699_OFF", "HIP8102"}
-    checks.append(("prefix trap: HIP2 gets no token", resolve_token(["HIP2"], names) is None))
+    # Prefix trap (made-up name): only HIP9xxxx / HIP9_S names exist, never HIP9 itself
+    names = {"HIP91234", "HIP95678", "HIP9_S", "GJ699", "GJ699_OFF", "HIP8102"}
+    checks.append(("prefix trap: HIP9 (only HIP9xxxx names exist) gets no token",
+                   resolve_token(["HIP9"], names) is None))
     checks.append(("exact token found", resolve_token(["GJ699", "HIP87937"], names) == "GJ699"))
     checks.append(("alternate HIP form used when Isaacson name absent",
                    resolve_token(token_candidates("GJ71", ["HIP 8102", "GJ 71"]), names) == "HIP8102"))
@@ -795,7 +1101,14 @@ def selftest():
     checks.append(("ABACAD with three other-star OFFs found",
                    len(g) == 1 and g[0]["off_targets"] == ["B1", "B2", "B3"]))
     win_off = sr + [wrow("S_OFF", i, 10.0, 7.0) for i in (1, 3, 5)]
-    checks.append(("ABACAD finder also accepts <name>_OFF OFFs", len(abacad("S", sr, win_off)) == 1))
+    checks.append(("all-<name>_OFF cadence left to bl_archive (not counted twice)",
+                   len(abacad("S", sr, win_off)) == 0))
+
+    def mid(r):         # same pointing, mid-res product
+        return dict(r, url=r["url"].replace(".0000.h5", ".0002.h5").replace("_0001.", "_0011."))
+    win_mid = win + [dict(mid(win[3]), mjd=57000 + 1.5 * m)]
+    checks.append(("a mid-res (0002) row between scans is ignored; 0000 cadence still found",
+                   len(abacad("S", sr, win_mid)) == 1))
     win_close = sr + [wrow("B1", 1, 10.05, 5.0), wrow("B2", 3, 9.0, 3.0), wrow("B3", 5, 11.0, 8.0)]
     checks.append(("OFF 0.05 deg from the star rejected", len(abacad("S", sr, win_close)) == 0))
     win_pre = [wrow("S2", i, 10.0, 5.0) for i in (0, 2, 4)] + win[3:]
@@ -817,7 +1130,43 @@ def selftest():
     checks.append(("score: ETZ+cadence > ETZ > near+cadence > close non-ETZ", sc[0] > sc[1] > sc[2] > sc[3]))
     checks.append(("score: E2-searched star demoted; VOID search not counted", sc[4] < sc[3] and sc[5] > sc[4]))
     checks.append(("score of far star never negative closeness", score(dict(base, etz=False, near_etz=False,
-                   distance_ly=500, bl={}))[0] == 0))
+                   distance_ly=500, bl=dict(why="no exact archive name")))[0] == 0))
+    # three-state cadence: unchecked is neither yes nor no
+    st = [cadence_state(dict(bl_token="T", bl=b)) for b in (
+        dict(checked=True, fine_scans=6, cadences=[], abacad=[{"files": ["x"]}], abacad_checked=True),
+        dict(checked=True, fine_scans=6, cadences=[], abacad=[], abacad_checked=True),
+        dict(checked=True, fine_scans=6, cadences=[]),
+        dict(checked=True, fine_scans=0, cadences=[]),
+        dict(checked=False, why="not in the checked subset"),
+        dict(checked=True, fine_scans=6, cadences=[], abacad=[], abacad_checked=True, abacad_truncated=1))]
+    checks.append(("cadence state yes/no/unchecked (fine scans but no ABACAD run = unchecked; truncated = unchecked)",
+                   st == ["yes", "no", "unchecked", "no", "unchecked", "unchecked"]))
+    checks.append(("unchecked star scores between no-cadence and cadence",
+                   score(dict(base, etz=True, near_etz=True, distance_ly=50, bl=dict(why="no exact archive name")))[0]
+                   < sc[1] < sc[0]))
+    # truncated time window is flagged (temporary cache dir)
+    import tempfile
+    global RAW
+    keep = RAW
+    with tempfile.TemporaryDirectory() as td:
+        RAW = Path(td)
+        (RAW / "bl_window").mkdir()
+        (RAW / "bl_window" / "full.json").write_text(json.dumps([{}] * WINDOW_LIMIT))
+        (RAW / "bl_window" / "part.json").write_text(json.dumps([{}] * 5))
+        t_full = window_rows(0, 1, True, "full")[1]
+        t_part = window_rows(0, 1, True, "part")[1]
+        RAW = keep
+    checks.append(("time-window reply that fills the limit is flagged truncated", t_full and not t_part))
+    # published BL searches: Price 2020 table text parses by band; lookup by any name form
+    ptxt = ("Table 1. Observation listing, L-band\n Target Date\n   HIP3765   57400.1  00:48 ...\n"
+            "Table 2. Observation listing, S-band\nGJ406      57500.2  10:56 ...\nHIP3765 57501.0 x\n")
+    pp = parse_price2020(ptxt)
+    pub = {"P": pp, "S": {"HD174995": ["C"]}}
+    checks.append(("published-search lookup: bands per paper, HD form, absent star -> none",
+                   pp == {"HIP3765": ["L", "S"], "GJ406": ["S"]}
+                   and published_for(["GJ406"], pub) == [dict(paper="P", bands=["S"])]
+                   and published_for(["HIP92703", "HD 174995"], pub) == [dict(paper="S", bands=["C"])]
+                   and published_for(["GJ699"], pub) == []))
     for name, ok in checks:
         print(f"  {'PASS' if ok else 'FAIL'}  {name}")
     ok = all(x[1] for x in checks)
