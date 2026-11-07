@@ -17,6 +17,8 @@ Anything with no explanation is reported as rung 2 ("in every ON, not in OFF,
 not yet explained") - never as a detection.
 
     python cadence_verdict.py data/gj699_cadence/events_f3.csv
+    python cadence_verdict.py EVENTS.csv --rfi-db [DB]   # + cross-star RFI database line
+                                                        # (rfi_db.py; DB default = seed)
 """
 import sys
 import warnings
@@ -26,13 +28,19 @@ import numpy as np
 warnings.filterwarnings("ignore")
 
 
-def main(path):
+def main(path, rfi_db_path=None):
     import pandas as pd
     from astropy.coordinates import Angle
     import recipe_api as R
     from earth_term import earth_drift
 
     d = pd.read_csv(path)
+    db = None
+    if rfi_db_path is not None:
+        import rfi_db
+        db = rfi_db.default_db(rfi_db_path or None)
+        print(f"RFI database: {db.n:,} hits from {len(db.fam_vocab):,} target families "
+              f"(the event's own target is always left out)")
     events = d.groupby("Hit_ID")
     print(f"{path}: {len(d)} rows = {events.ngroups} events "
           f"(each seen in {d.groupby('Hit_ID').size().max()} ON scans)\n")
@@ -55,15 +63,30 @@ def main(path):
             why = fn(f)
             if why:
                 reasons.append(why)
+        db_line = None
+        if db is not None:
+            v = db.query(f, dr, mjd=mjd, target=str(r0["Source"]),
+                         tobs_s=float(r0["obs_length"]), res_hz=abs(float(r0["DELTAF"])))
+            why, db_line = rfi_db.explain_line(v)
+            if why:
+                reasons.append(why)
         if not reasons:
             unexplained += 1
         tag = "explained" if reasons else "UNEXPLAINED - rung 2, try to kill it"
         print(f"{hid:12s} {f:12.6f} MHz  drift {dr:+.4f}  SNR {snr:>14s}  -> {tag}")
         for why in reasons:
             print(f"{'':14s}- {why}")
+        if db_line and not any(db_line.startswith(w[:40]) for w in reasons):
+            print(f"{'':14s}  ({db_line})")
     print(f"\n{events.ngroups} events, {unexplained} unexplained")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else "data/gj699_cadence/events_f3.csv"))
+    import argparse
+    ap = argparse.ArgumentParser(description="explain every event turboSETI's ON/OFF filter leaves")
+    ap.add_argument("events", nargs="?", default="data/gj699_cadence/events_f3.csv")
+    ap.add_argument("--rfi-db", nargs="?", const="", default=None, metavar="DB",
+                    help="add a cross-star RFI database line (rfi_db.py); DB defaults to the seed")
+    a = ap.parse_args()
+    sys.exit(main(a.events, a.rfi_db))
