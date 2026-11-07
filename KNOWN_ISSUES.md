@@ -35,3 +35,4 @@ Status: **Open** · **Mitigated** (worked around here) · **Won't fix** (upstrea
 - **Symptom:** all 9 GJ699 filter-3 events (GEO satellites) are present in all three OFF scans at true SNR 29–673; the 1674.9977 MHz track is in both later OFFs.
 - **Cause:** an OFF counts as clean when turboSETI logged no hit near it; carrier combs (one hit per neighbourhood) and RFI that changes drift between scans slip through.
 - **Workaround:** `cadence_forced.py` measures every scan along the predicted track (plus a free-drift look in OFFs); `cadence_verdict.py --forced`.
+- **Limit:** in crowded bands an OFF often holds an unrelated carrier near the track. A sky-like ON-only plant 3–20 kHz from a filter-2 hit came back RFI 6/60 and OFF-OCCUPIED 32/60, so a forced RFI call there is E1, not proof the hit is local. NOT-RECOVERED/INCOMPLETE rows were not tested and never count as explained.

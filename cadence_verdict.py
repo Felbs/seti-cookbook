@@ -14,9 +14,12 @@ passes it. This tool takes the surviving events and, for each, asks:
   3. nature  - is it on a natural line (HI, OH, masers)?
   4. number  - is it on a round-number frequency?
   5. forced  - optional (--forced RESULTS.csv from cadence_forced.py run): the
-               candidate MEASURED in every scan along its predicted track. Present
-               in an OFF = RFI; missing from an ON = fails the cadence; a scan that
-               could not be measured leaves the event INCOMPLETE, never clean.
+               candidate MEASURED in every scan along its predicted track. On the
+               track in an OFF = RFI; an OFF occupied near the track = fails the
+               cadence (ambiguous: same emitter or a neighbour); missing from an ON =
+               fails the cadence. NOT-RECOVERED, INCOMPLETE and UNTESTED mean the
+               forced check could NOT test the event: they are printed as
+               information and never count as an explanation.
 Anything with no explanation is reported as rung 2 ("in every ON, not in OFF,
 not yet explained") - never as a detection.
 
@@ -31,29 +34,61 @@ import numpy as np
 warnings.filterwarnings("ignore")
 
 
+UNTESTABLE = ("NOT-RECOVERED", "INCOMPLETE", "UNTESTED")
+
+
+def _num(x):
+    try:
+        x = float(x)
+    except (TypeError, ValueError):
+        return None
+    return x if x == x else None
+
+
+def _off_detail(r, t):
+    """How an OFF scan counted as present: on-track SNR, or the free-drift look's z/drift/offset."""
+    how = str(r.get("how_" + t, "track"))
+    how = "track" if how in ("", "nan") else how
+    if how == "nearby":
+        z, d, o = _num(r.get("nearz_" + t)), _num(r.get("neard_" + t)), _num(r.get("nearoff_" + t))
+        dd = f" drift {d:+.3f} Hz/s" if d is not None else ""
+        oo = f" {o:+.0f} Hz off the track" if o is not None else ""
+        return f"{t} free-drift look z {z if z is not None else '?'}{dd}{oo}"
+    snr = _num(r.get("snr_" + t))
+    tag = "on-track" if how == "track" else "on-track box, other drift"
+    return f"{t} {tag} SNR {snr:.0f}" if snr is not None else f"{t} {tag}"
+
+
 def forced_reasons(rows):
-    """Reasons from cadence_forced.py rows of one event (one row per hit)."""
-    out = []
+    """(reasons, notes) from cadence_forced.py rows of one event (one row per hit).
+    Only verdicts that MEASURED the event become reasons; NOT-RECOVERED,
+    INCOMPLETE and UNTESTED go to notes and never explain an event."""
+    out, notes = [], []
     for _, r in rows.iterrows():
         tags = [c[2:] for c in r.index if c.startswith("z_")]
-        snr = " ".join(f"{t[1:]}:{r['snr_' + t]:.0f}" if r['snr_' + t] == r['snr_' + t] else f"{t[1:]}:-"
-                       for t in tags)
+        snr = " ".join(f"{t[1:]}:{_num(r['snr_' + t]):.0f}" if _num(r['snr_' + t]) is not None
+                       else f"{t[1:]}:-" for t in tags)
         v = r["verdict"]
+        offs = [t for t in tags if t.endswith("OFF") and str(r["present_" + t]) in ("1", "1.0")]
         if v == "RFI":
-            offs = [t for t in tags if t.endswith("OFF") and str(r["present_" + t]) in ("1", "1.0")]
-            out.append(f"forced: present in OFF scan(s) {', '.join(offs)} - local (true SNR {snr})")
+            out.append(f"forced: RFI - same track in an OFF ({'; '.join(_off_detail(r, t) for t in offs)}) "
+                       f"(true SNR {snr})")
+        elif v == "OFF-OCCUPIED":
+            out.append(f"forced: OFF occupied near the track ({'; '.join(_off_detail(r, t) for t in offs)}) "
+                       f"- fails the cadence, but same emitter or a neighbour is ambiguous (true SNR {snr})")
         elif v in ("ONE-OFF", "PARTIAL"):
             out.append(f"forced: {v} - measured absent from some ON scans (true SNR {snr})")
-        elif v == "NOT-RECOVERED":
-            out.append("forced: not recovered even in its own scan (not a steady narrowband track)")
+        elif v in UNTESTABLE:
+            extra = f"; OFF power at {', '.join(offs)}" if offs else ""
+            notes.append(f"forced: {v} - the forced check could not test this hit{extra} (true SNR {snr})")
         else:
-            print(f"{'':14s}  forced: {v} (true SNR {snr})")
+            notes.append(f"forced: {v} (true SNR {snr})")
     vs = list(rows["verdict"])
     if len(vs) > 1 and out:
         if len(set(vs)) == 1:
-            return [out[0] + f" [all {len(vs)} hits of this event agree]"]
-        return out + [f"forced: hits of this event disagree ({', '.join(vs)})"]
-    return out
+            return [out[0] + f" [all {len(vs)} hits of this event agree]"], []
+        return out + [f"forced: hits of this event disagree ({', '.join(vs)})"], notes
+    return out, notes
 
 
 def main(path, forced=None):
@@ -89,14 +124,22 @@ def main(path, forced=None):
             why = fn(f)
             if why:
                 reasons.append(why)
+        notes = []
         if fz is not None:
-            reasons += forced_reasons(fz[fz["row"].isin(g["_row"])])
+            fr = fz[fz["row"].isin(g["_row"])]
+            if len(fr) == 0:
+                notes.append("forced: no forced-check row for this event (not tested)")
+            else:
+                rs, notes = forced_reasons(fr)
+                reasons += rs
         if not reasons:
             unexplained += 1
         tag = "explained" if reasons else "UNEXPLAINED - rung 2, try to kill it"
         print(f"{hid:12s} {f:12.6f} MHz  drift {dr:+.4f}  SNR {snr:>14s}  -> {tag}")
         for why in reasons:
             print(f"{'':14s}- {why}")
+        for n in notes:
+            print(f"{'':14s}  (info) {n}")
     print(f"\n{events.ngroups} events, {unexplained} unexplained")
     return 0
 

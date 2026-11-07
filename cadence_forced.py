@@ -27,18 +27,30 @@ plus the true SNR the bar corresponds to. "Absent" therefore means "measured,
 and below this bar" - and a scan that could not be measured is None, never
 absent.
 
-Verdicts (7):  RFI          present in any OFF
+Verdicts (8), in order of precedence:
+               INCOMPLETE   the scan it was found in cannot be measured, or (after the
+                            OFF tests below) some other scan cannot be measured
+               NOT-RECOVERED  measured, but not seen even in the scan it was found in:
+                            the check could not TEST it (not "explained")
+               UNTESTED     no OFF scan in the cadence
+               RFI          present ON THE TRACK in an OFF, at a drift consistent with
+                            the track (same-emitter evidence)
+               OFF-OCCUPIED an OFF has power near the track, but only through the
+                            free-drift look or at an inconsistent drift: something is
+                            there, maybe the same emitter, maybe a neighbour (ambiguous)
                PASSES       present in every ON, absent from every OFF, all measured
                ONE-OFF      present in exactly one ON (the one it was found in)
                PARTIAL      present in some, not all, ONs
-               INCOMPLETE   some scan not measurable (track leaves the band, blanked data)
-               NOT-RECOVERED  not seen even in the scan it was found in (self-check)
-               UNTESTED     no OFF scan in the cadence
 PASSES is rung 2 at most: "in every ON, not in any OFF, not yet explained".
+In crowded bands an OFF often holds an unrelated carrier near the track, so a
+sky-like ON-only tone there can come back RFI or OFF-OCCUPIED (measured rates in
+FORCED_CADENCE_RESULT.md); in those bands an RFI call is E1, not E2.
 
     python cadence_forced.py selftest
     python cadence_forced.py run --events events_f2.csv --files ON1.h5 OFF1.h5 ... --out forced_f2.csv
     python cadence_forced.py control --files data/hi_*GJ699*.npz      # plants in real data
+    python cadence_forced.py control --files h5s.lst --near-events events_f2.csv --where ON
+                                         # plants 3-20 kHz from real hits (crowded bands)
 
 Idea credited to seti-hunter's weirdness_engine.py (no licence; reimplemented
 from a description, no code copied).
@@ -56,7 +68,8 @@ import numpy as np
 warnings.filterwarnings("ignore")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-VERDICTS = ["RFI", "PASSES", "ONE-OFF", "PARTIAL", "INCOMPLETE", "NOT-RECOVERED", "UNTESTED"]
+VERDICTS = ["RFI", "OFF-OCCUPIED", "PASSES", "ONE-OFF", "PARTIAL", "INCOMPLETE", "NOT-RECOVERED",
+            "UNTESTED"]
 
 DEFAULTS = dict(
     z_bar=6.0,          # presence: z >= z_bar against the null tracks
@@ -72,6 +85,8 @@ DEFAULTS = dict(
     med_width=129,      # running-median bandpass removal along frequency
     nearby_hz=100.0,    # OFF scans only: also look +-this far from the track mid ...
     nearby_drift=0.75,  # ... at ANY drift within +-this (Hz/s) of the track's: RFI wanders
+    same_drift_k=2.0,   # on-track OFF presence counts as RFI only if its best free drift in the
+                        # on-track window is within same_drift_k * drift_error() of the track's
 )
 
 
@@ -287,16 +302,24 @@ def refine(scan, f_ref, t_ref, drift, opts):
     return f_ref + r["offset_ch"] * scan.foff, d2, r
 
 
-def verdict(kinds, present, found=None):
-    """kinds: 'ON'/'OFF' per scan; present: True / False / None (unmeasured)."""
+def verdict(kinds, present, found=None, how=None):
+    """kinds: 'ON'/'OFF' per scan; present: True / False / None (unmeasured);
+    how (optional, per scan): 'track' (on-track, consistent drift), 'crossing'
+    (on-track box, inconsistent drift) or 'nearby' (free-drift look only).
+    Without `how`, every OFF presence counts as 'track'."""
+    if found is not None and present[found] is None:
+        return "INCOMPLETE"
     if found is not None and present[found] is not True:
         return "NOT-RECOVERED"
     offs = [i for i, k in enumerate(kinds) if k == "OFF"]
     ons = [i for i, k in enumerate(kinds) if k == "ON"]
     if not offs:
         return "UNTESTED"
-    if any(present[i] is True for i in offs):
+    how = how or ["track"] * len(kinds)
+    if any(present[i] is True and how[i] == "track" for i in offs):
         return "RFI"
+    if any(present[i] is True for i in offs):
+        return "OFF-OCCUPIED"
     if any(p is None for p in present):
         return "INCOMPLETE"
     n_on = sum(present[i] is True for i in ons)
@@ -362,6 +385,22 @@ def forced(cand, scans, opts, curv_per_hz=0.0):
         m = measure(s, f_lin, t_lin, d_use, opts, curv_model=cm, t_curv=t_ref, half_ch=half)
         m["drift_model"] = round(float(d_use), 5)
         on_track = bool(m["present"])
+        m["how"] = "track" if on_track else ""
+        if s.kind == "OFF" and on_track:
+            # Same emitter, or an unrelated carrier crossing the box? Free drift, SAME window:
+            # the presence counts as RFI only if the best drift there agrees with the track.
+            q = quantum(s)
+            nd = opts["nearby_drift"]
+            grid = list(d_use + q * np.arange(-round(nd / q), round(nd / q) + 1))
+            m3 = measure(s, f_lin, t_lin, d_use, opts, curv_model=cm, t_curv=t_ref, half_ch=half,
+                         drift_grid=grid)
+            tol = opts["same_drift_k"] * drift_error(s, d_use, m["z"], opts)
+            if m3["measured"]:
+                m["free_drift"] = m3["drift_used"]
+                if abs(m3["drift_used"] - d_use) > tol:
+                    m["how"] = "crossing"
+                    m["reason"] = (f"on-track box, but best drift there {m3['drift_used']:+.3f} Hz/s "
+                                   f"(track {d_use:+.3f} +- {tol:.3f}): maybe a neighbour")
         if s.kind == "OFF" and opts["nearby_hz"] > 0 and m["measured"]:
             # Local interference does not keep one drift (GJ699 1674.9977 MHz: -0.33, -0.53,
             # -0.20, +0.21 Hz/s in successive scans). Absence from an OFF must survive a
@@ -377,14 +416,16 @@ def forced(cand, scans, opts, curv_per_hz=0.0):
                 m["nearby_offset_hz"] = round(m2["offset_ch"] * abs(s.foff), 1)
                 if m2["present"] and not m["present"]:
                     m["present"] = True
+                    m["how"] = "nearby"
                     m["reason"] = (f"nearby: z {m2['z']} at drift {m2['drift_used']:+.3f} Hz/s, "
                                    f"{m2['offset_ch'] * abs(s.foff):+.0f} Hz off the track")
         per[i] = m
-        if on_track:          # only ON-TRACK presence phase-connects; a nearby look never does
+        if on_track and m["how"] == "track":   # only consistent ON-TRACK presence phase-connects
             tm = tk.mean()
             f_at = f_lin + d_use * (tm - t_lin) + 0.5 * cm * (tm - t_ref) ** 2 + m["offset_ch"] * s.foff
             anchors.append((tm, f_at))
-    v = verdict([s.kind for s in scans], [r["present"] for r in per], i0)
+    v = verdict([s.kind for s in scans], [r["present"] for r in per], i0,
+                [r.get("how", "track" if r["present"] else "") for r in per])
     return dict(verdict=v, f_ref_hz=f_ref, drift=drift, scans=per,
                 refine_z=None if ref is None else ref["z"], drift_err=dd1)
 
@@ -471,11 +512,17 @@ def cmd_run(a):
     gch = (d["Freq"] * 1e6 - scans[0].fch1) / scans[0].foff
     d = d.assign(_ch=gch).sort_values("_ch")
     rows = []
+    skipped = []
     t0 = time.time()
     for n, (_, r) in enumerate(d.iterrows()):
         fid = Path(str(r["FileID"])).name
         found = names.index(fid) if fid in names else None
         if found is None:
+            # never drop a row silently: it is written as INCOMPLETE and counted
+            skipped.append(fid)
+            rows.append(dict(row=int(r["_row"]), hit_id=r.get("Hit_ID"), freq_mhz=float(r["Freq"]),
+                             drift=float(r["DriftRate"]), turbo_snr=float(r["SNR"]), found="",
+                             verdict="INCOMPLETE", note=f"scan file not given: {fid}"))
             continue
         res = forced(dict(f_hz=float(r["Freq"]) * 1e6, drift=float(r["DriftRate"]), found=found),
                      scans, opts, curv)
@@ -490,7 +537,12 @@ def cmd_run(a):
             row[f"present_{tag}"] = {True: 1, False: 0, None: ""}[m["present"]]
             row[f"why_{tag}"] = m["reason"]
             if m["kind"] == "OFF":
+                row[f"how_{tag}"] = m.get("how", "")
                 row[f"nearz_{tag}"] = m.get("nearby_z")
+                row[f"neard_{tag}"] = m.get("nearby_drift")
+                row[f"nearoff_{tag}"] = m.get("nearby_offset_hz")
+        row["off_present"] = " ".join(f"{j}{m['kind']}" for j, m in enumerate(res["scans"])
+                                      if m["kind"] == "OFF" and m["present"])
         rows.append(row)
         if (n + 1) % 100 == 0:
             print(f"  {n+1}/{len(d)}  {time.time()-t0:.0f} s", flush=True)
@@ -498,6 +550,9 @@ def cmd_run(a):
     out.to_csv(a.out, index=False)
     counts = out["verdict"].value_counts().to_dict()
     print(f"\n{len(out)} candidates in {time.time()-t0:.0f} s -> {a.out}")
+    if skipped:
+        print(f"  WARNING: {len(skipped)} rows name a scan not in --files (written as INCOMPLETE): "
+              f"{sorted(set(skipped))[:5]}")
     for v in VERDICTS:
         print(f"  {v:14s} {counts.get(v, 0)}")
     rng = np.random.default_rng(a.seed)
@@ -516,35 +571,93 @@ def cmd_run(a):
     if a.json:
         Path(a.json).write_text(json.dumps(dict(events=a.events, files=names, opts=opts,
                                                 counts=counts, negative_controls=neg,
+                                                rows_scan_not_given=len(skipped),
                                                 curvature_hz_s2_at_1p5GHz=curv * f_mid), indent=1))
     passes = out[out["verdict"] == "PASSES"]
     if len(passes):
         print("\nPASSES rows (not yet explained - try to kill them):")
         for _, r in passes.iterrows():
             print(f"  {r['freq_mhz']:.6f} MHz drift {r['drift']:+.4f} found in scan {r['found']}")
-    return 0
+    return 2 if skipped else 0
 
 
 # ------------------------------------------------------------------- control
+def box_plant(data, foff_hz, tsamp, plants):
+    """setigen-free injector (fallback, and a cross-check of inject.plant): a
+    1-channel box tone whose centre moves ch + drift*t/foff, integrated exactly
+    over each spectrum (256 sub-steps, each split linearly between its two
+    nearest channels). Same units as inject.plant (inject.level_for), same
+    convention: ch = channel at the START of spectrum 0, data index order."""
+    import inject
+    nt, nc = data.shape
+    for p in plants:
+        lvl = p.get("level") or inject.level_for(data, p["snr"])
+        u = (np.arange(256) + 0.5) / 256
+        for k in range(nt):
+            c = p["ch"] + p["drift"] * (k + u) * tsamp / foff_hz
+            j = np.floor(c).astype(int)
+            w = c - j
+            for jj, ww in ((j, 1 - w), (j + 1, w)):
+                ok = (jj >= 0) & (jj < nc)
+                np.add.at(data[k], jj[ok], (lvl * ww[ok] / u.size).astype(data.dtype))
+    return data
+
+
+def get_injector(name="auto"):
+    """'setigen' (inject.plant), 'box' (box_plant) or 'auto' (setigen if importable)."""
+    if name in ("auto", "setigen"):
+        try:
+            import setigen  # noqa: F401
+            import inject
+            return "setigen", inject.plant
+        except ImportError:
+            if name == "setigen":
+                raise SystemExit("setigen is not installed; use --injector box")
+    return "box", lambda data, foff, ts, pl: box_plant(data, foff, ts, pl)
+
+
+def _scan_key(p):
+    """Sort scans by (MJD, seconds) in a GUPPI-style name; fall back to the name."""
+    import re
+    m = re.search(r"_(\d{5})_(\d{5})_", Path(str(p)).name)
+    return (int(m.group(1)), int(m.group(2))) if m else (0, 0, Path(str(p)).name)
 def cmd_control(a):
     """Positive + negative controls on REAL data: plant a smeared tone along one
     phase-connected track into the ONs (expect PASSES) or into every scan
     (expect RFI), at several strengths and drifts."""
-    import inject
-    opts = dict(DEFAULTS, z_bar=a.zbar, curvature=a.curvature)
-    raw = [open_scan(p) for p in sorted(a.files, key=lambda p: Path(p).name.split("_")[5])]
+    import pandas as pd
+    opts = dict(DEFAULTS, z_bar=a.zbar, curvature=a.curvature, nearby_hz=a.nearby_hz)
+    files = a.files
+    if len(files) == 1 and files[0].endswith(".lst"):
+        files = [ln.strip() for ln in open(files[0]) if ln.strip()]
+    inj_name, plant = get_injector(a.injector)
+    print(f"injector: {inj_name}")
+    raw = [open_scan(p) for p in sorted(files, key=_scan_key)]
     scans0 = raw
+    near = None
+    if a.near_events:
+        near = pd.read_csv(a.near_events)["Freq"].values * 1e6
+        print(f"plants 3-20 kHz from a random hit of {a.near_events} ({len(near)} rows)")
     print("cadence:", " ".join(s.kind for s in scans0), f"({scans0[0].nchan} channels each)")
     curv = curvature_per_hz(scans0)
     rng = np.random.default_rng(a.seed)
     nc = scans0[0].nchan
     centre = nc // 2
     results = []
-    cases = [(d, snr, where) for d in a.drifts for snr in a.snrs for where in ("ON", "ALL")]
+    cases = [(d, snr, where) for d in a.drifts for snr in a.snrs for where in a.where]
+    dcp = scans0[0].dc_period
     for d, snr, where in cases:
         for rep in range(a.reps):
-            # start channel well inside the slice, away from DC and the HI hump
             while True:
+                if near is not None:
+                    # crowded control: a few kHz from a real hit, in the same coarse channel
+                    f = float(rng.choice(near)) + rng.choice([-1, 1]) * rng.uniform(3e3, 20e3)
+                    c = (f - scans0[0].fch1) / scans0[0].foff
+                    dc_far = dcp is None or abs((c % dcp) - dcp // 2) > 200
+                    if 14000 < c < nc - 14000 and dc_far:
+                        break
+                    continue
+                # start channel well inside the slice, away from DC and the HI hump
                 c = float(rng.uniform(40000, nc - 40000))
                 f = scans0[0].fch1 + scans0[0].foff * c
                 if abs(c - centre) > 20000 and not (1420.0e6 < f < 1420.8e6):
@@ -560,13 +673,15 @@ def cmd_control(a):
                     t0 = s.tstart * 86400.0
                     dt0 = t0 - t_ref
                     f0 = f + d * dt0 + 0.5 * curv * f * dt0 ** 2
-                    inject.plant(ns.data, s.foff, s.tsamp, [dict(ch=(f0 - ns.fch1) / s.foff, drift=d, snr=snr)])
+                    plant(ns.data, s.foff, s.tsamp, [dict(ch=(f0 - ns.fch1) / s.foff, drift=d, snr=snr)])
                 sc.append(ns)
-            # the 'hit' as a search would report it: freq at spectrum-0 centre, drift off by 0.4 quantum
-            f_hit = f + d * 0.5 * fs.tsamp
+            # the 'hit' as a search would report it: freq at spectrum-0 centre (= f, since t_ref is
+            # that centre), drift off by 0.4 quantum
+            f_hit = f
             r = forced(dict(f_hz=f_hit, drift=d + 0.4 * quantum(fs), found=0), sc, opts, curv)
             want = "PASSES" if where == "ON" else "RFI"
-            results.append(dict(drift=d, snr=snr, where=where, verdict=r["verdict"], ok=r["verdict"] == want,
+            results.append(dict(freq_mhz=round(f / 1e6, 6), drift=d, snr=snr, where=where,
+                                verdict=r["verdict"], ok=r["verdict"] == want,
                                 snr_read=[m["snr"] for m in r["scans"]], z=[m["z"] for m in r["scans"]]))
             print(f"  plant drift {d:+.2f} true SNR {snr:4.0f} in {where:3s} -> {r['verdict']:13s} "
                   f"{'ok' if r['verdict']==want else 'MISS'}  read SNR "
@@ -586,8 +701,15 @@ def cmd_control(a):
     print("\nsummary (correct / planted):")
     for k, v in summ.items():
         print(f"  {k:30s} {v[0]}/{v[1]}")
+    for where in a.where:
+        vc = {}
+        for r in results:
+            if r["where"] == where:
+                vc[r["verdict"]] = vc.get(r["verdict"], 0) + 1
+        print(f"  verdicts of plants in {where}: {vc}")
     if a.json:
-        Path(a.json).write_text(json.dumps(dict(results=results, negative_controls=neg, opts=opts), indent=1))
+        Path(a.json).write_text(json.dumps(dict(results=results, negative_controls=neg, opts=opts,
+                                                injector=inj_name, near_events=a.near_events), indent=1))
     return 0
 
 
@@ -603,10 +725,12 @@ def _synthetic(rng, nchan=8192, kinds=("ON", "OFF", "ON", "OFF", "ON", "OFF"), r
     return out
 
 
-def _plant_track(scans, f, d, snr, which, off_drift=None):
+def _plant_track(scans, f, d, snr, which, off_drift=None, plant=None):
     """Plant along one straight track; with off_drift, the OFF scans get a tone
     at the track's mid-scan position but with a DIFFERENT drift (wandering RFI)."""
-    import inject
+    if plant is None:
+        import inject
+        plant = inject.plant
     t_ref = scans[0].times_s()[0] - 0.5 * scans[0].tsamp
     for i, s in enumerate(scans):
         if i not in which:
@@ -618,7 +742,7 @@ def _plant_track(scans, f, d, snr, which, off_drift=None):
             f0, dd = f0 + (d - off_drift) * half, off_drift
         ch = (f0 - s.fch1) / s.foff
         if -50 < ch < s.nchan + 50:
-            inject.plant(s.data, s.foff, s.tsamp, [dict(ch=ch, drift=dd, snr=snr)])
+            plant(s.data, s.foff, s.tsamp, [dict(ch=ch, drift=dd, snr=snr)])
 
 
 def selftest():
@@ -627,10 +751,13 @@ def selftest():
     opts = dict(DEFAULTS)
     on3 = [0, 2, 4]
 
-    def case(name, which, d, snr, want, ch=3000.0, kinds=None, ripple=0.4, off_drift=None, o=None):
+    def case(name, which, d, snr, want, ch=3000.0, kinds=None, ripple=0.4, off_drift=None, o=None,
+             plant=None, extra=None):
         sc = _synthetic(rng, kinds=kinds, ripple=ripple) if kinds else _synthetic(rng, ripple=ripple)
         f = sc[0].fch1 + sc[0].foff * ch
-        _plant_track(sc, f, d, snr, which, off_drift)
+        _plant_track(sc, f, d, snr, which, off_drift, plant)
+        if extra:
+            extra(sc, f)
         # reported hit: centre of spectrum 0, drift off by 0.4 quantum, freq off by 0.3 channel
         f_hit = f + d * 0.5 * sc[0].tsamp + 0.3 * sc[0].foff
         r = forced(dict(f_hz=f_hit, drift=d + 0.4 * quantum(sc[0]), found=0), sc, o or opts)
@@ -647,9 +774,24 @@ def selftest():
     case("fast sky-like tone in ONs only (smeared)", on3, -1.5, 80, "PASSES")
     case("tone in every scan", range(6), -0.30, 40, "RFI")
     case("tone in every scan, zero drift", range(6), 0.0, 40, "RFI")
-    case("wandering RFI: ONs at -0.30, OFFs at +0.20 Hz/s", range(6), -0.30, 40, "RFI", off_drift=0.20)
+    case("wandering RFI: ONs at -0.30, OFFs at +0.20 Hz/s (seen only by the free-drift look)",
+         range(6), -0.30, 40, "OFF-OCCUPIED", off_drift=0.20)
     case("same, free-drift OFF look switched off (shows why it exists)", range(6), -0.30, 40, "PASSES",
          off_drift=0.20, o=dict(opts, nearby_hz=0.0))
+    case("sky-like tone in ONs only, planted with the setigen-free box injector", on3, -0.12, 40, "PASSES",
+         plant=box_plant)
+
+    def crossing(sc, f):
+        # an unrelated strong carrier in every OFF, drift +0.40 Hz/s, crossing the track mid-scan
+        for s in sc:
+            if s.kind != "OFF":
+                continue
+            t_mid = s.tstart * 86400 + 0.5 * s.nt * s.tsamp
+            f_track = f + (-0.12) * (t_mid - (sc[0].tstart * 86400))
+            f0 = f_track - 0.40 * 0.5 * s.nt * s.tsamp
+            box_plant(s.data, s.foff, s.tsamp, [dict(ch=(f0 - s.fch1) / s.foff, drift=0.40, snr=300)])
+    case("ON-only sky tone + unrelated carrier crossing the track in every OFF (not same-emitter)",
+         on3, -0.12, 40, "OFF-OCCUPIED", extra=crossing)
     case("tone in first ON only", [0], -0.12, 40, "ONE-OFF")
     case("tone in ON1+ON2 only", [0, 2], -0.12, 40, "PARTIAL")
     case("track leaves the band", on3, -2.0, 60, "INCOMPLETE", ch=7300.0)
@@ -662,6 +804,41 @@ def selftest():
     checks.append((f"T/F/None/F -> {v2} (must not be ONE-OFF)", v2 != "ONE-OFF" and v2 == "INCOMPLETE"))
     v3 = verdict(["ON", "OFF", "ON", "OFF"], [True, True, None, None], 0)
     checks.append((f"present in an OFF beats unmeasured scans -> {v3}", v3 == "RFI"))
+    v4 = verdict(["ON", "OFF", "ON", "OFF"], [None, True, True, False], 0)
+    checks.append((f"found scan unmeasurable -> {v4} (INCOMPLETE, not NOT-RECOVERED/RFI)", v4 == "INCOMPLETE"))
+    v5 = verdict(["ON", "OFF", "ON", "OFF"], [True, True, True, True], 0, ["track", "crossing", "", "nearby"])
+    checks.append((f"OFF presence only crossing/nearby -> {v5} (not RFI)", v5 == "OFF-OCCUPIED"))
+    # cadence_verdict --forced: an untestable verdict must never explain an event
+    try:
+        import pandas as pd
+        import cadence_verdict as CV
+        base = {"z_0ON": 3.0, "snr_0ON": 4.0, "present_0ON": 0, "z_1OFF": 2.0, "snr_1OFF": 3.0,
+                "present_1OFF": 0, "how_1OFF": ""}
+        for v, want in (("NOT-RECOVERED", 0), ("INCOMPLETE", 0), ("UNTESTED", 0), ("RFI", 1),
+                        ("OFF-OCCUPIED", 1)):
+            rs, nt_ = CV.forced_reasons(pd.DataFrame([dict(base, verdict=v)]))
+            checks.append((f"cadence_verdict: {v} gives {len(rs)} reason(s), {len(nt_)} note(s) "
+                           f"(want {want} reason)", len(rs) == want))
+    except ImportError as e:
+        checks.append((f"cadence_verdict import failed: {e}", False))
+    # the box injector against inject.plant (setigen): same power, same place
+    try:
+        import inject
+        a0 = np.zeros((16, 400), np.float32) + 1.0
+        a1, a2 = a0.copy(), a0.copy()
+        pl = [dict(ch=200.3, drift=-0.7, snr=50, level=10.0)]
+        inject.plant(a1, -2.835503418452676, 17.986224128, [dict(pl[0])])
+        box_plant(a2, -2.835503418452676, 17.986224128, [dict(pl[0])])
+        d1, d2 = a1 - 1.0, a2 - 1.0
+        cen = lambda d: (d * np.arange(d.shape[1])).sum(1) / d.sum(1)  # noqa: E731
+        dp = float(np.max(np.abs(d1.sum(1) / d2.sum(1) - 1)))
+        dc = float(np.max(np.abs(cen(d1) - cen(d2))))
+        # setigen samples the 1-channel box at channel centres, so its centroid snaps by up to
+        # 0.5 ch; the box injector integrates exactly. Same power, same place to < 0.5 ch.
+        checks.append((f"box injector vs inject.plant: power per spectrum within {dp:.3f}, "
+                       f"centroid within {dc:.3f} ch (want <= 2 %, < 0.5 ch)", dp <= 0.02 and dc < 0.5))
+    except ImportError:
+        print("  (setigen not installed: box injector cross-check skipped)")
     # negative controls: random positions in plain noise must be absent
     sc = _synthetic(rng)
     neg = negative_controls(sc, opts, 30, rng, [4096.0], [0.0, -0.12, 0.5, -2.0])
@@ -704,6 +881,12 @@ def main():
     c.add_argument("--zbar", type=float, default=DEFAULTS["z_bar"])
     c.add_argument("--curvature", action="store_true")
     c.add_argument("--json")
+    c.add_argument("--where", nargs="+", default=["ON", "ALL"], choices=["ON", "ALL"],
+                   help="ON = plant in the ONs only (want PASSES); ALL = every scan (want RFI)")
+    c.add_argument("--near-events", help="events CSV: plant 3-20 kHz from its hits (crowded bands)")
+    c.add_argument("--injector", default="auto", choices=["auto", "setigen", "box"],
+                   help="auto = inject.plant (setigen) if installed, else the setigen-free box tone")
+    c.add_argument("--nearby-hz", type=float, default=DEFAULTS["nearby_hz"])
     a = ap.parse_args()
     if a.cmd in (None, "selftest"):
         return selftest()
