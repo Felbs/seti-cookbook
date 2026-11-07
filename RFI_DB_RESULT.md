@@ -149,7 +149,8 @@ licence; it keeps the terms of its sources, and anyone reusing it should cite th
   Life: Observations of 1327 Nearby Stars over 1.1-3.4 GHz"; tables
   `lband2019_events.csv` and `pks10cm2019_events.csv` from seti.berkeley.edu/listen2019.
   We found **no licence or terms-of-use statement** on that page or on the BL open-data
-  pages (checked 2026-11-07). We redistribute 9,584 derived rows (frequency, drift, SNR,
+  pages (checked 2026-11-07); this paper's Zenodo deposit (10.5281/zenodo.7600403, .dat
+  files only) is CC BY 4.0, as is the 2017 release. See DATA_NOTICE.md. We redistribute 9,584 derived rows (frequency, drift, SNR,
   source, file id) with this attribution as openly published research data; if the
   owners object, `rfi_db.py build` regenerates the seed without them.
 - Breakthrough Listen open data archive (seti.berkeley.edu/opendata): the GJ699 GBT

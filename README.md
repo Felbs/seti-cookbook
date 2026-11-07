@@ -448,4 +448,4 @@ This repo is a thin layer of curiosity on top of other people's instruments.
 
 ## License and citation
 
-MIT — see [LICENSE](LICENSE). Code borrowed in spirit from other projects keeps their credit above; data belongs to Breakthrough Listen and SDSS under their own terms. To cite this work, use [CITATION.cff](CITATION.cff) (GitHub shows a "Cite this repository" button).
+MIT — see [LICENSE](LICENSE). Code borrowed in spirit from other projects keeps their credit above; data belongs to Breakthrough Listen and SDSS under their own terms; the derived tables shipped here (`rfi_seed.csv.gz`, `targets.json`) are listed with their sources in [DATA_NOTICE.md](DATA_NOTICE.md). To cite this work, use [CITATION.cff](CITATION.cff) (GitHub shows a "Cite this repository" button).
