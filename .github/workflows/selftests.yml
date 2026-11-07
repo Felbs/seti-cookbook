@@ -15,12 +15,26 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: install (CPU only)
-        run: pip install numpy scipy h5py hdf5plugin astropy matplotlib setigen "setuptools<81"
+        run: pip install numpy scipy h5py hdf5plugin astropy matplotlib pandas setigen "setuptools<81"
       - name: no data files in git
         run: |
           bad=$(git ls-files | grep -E '\.(h5|fil|npz|dat|fits)$|^data/' || true)
-          big=$(git ls-files -z | xargs -0 du -k | awk '$1 > 2048 {print $2}')
-          if [ -n "$bad$big" ]; then echo "data or >2 MB files tracked:"; echo "$bad $big"; exit 1; fi
+          big=$(git ls-files -z | xargs -0 du -k | awk '$1 > 3072 {print $2}')
+          if [ -n "$bad$big" ]; then echo "data or >3 MB files tracked (targets.json is ~2.3 MB by design):"; echo "$bad $big"; exit 1; fi
+      - name: injection-recovery protocol (eta_P)
+        run: python etap.py selftest
+      - name: target registry
+        run: python targets.py selftest
+      - name: cross-star RFI database
+        run: python rfi_db.py selftest
+      - name: fast single-read search (pure numpy)
+        run: FASTSEARCH_NO_NUMBA=1 python fastsearch.py selftest
+      - name: fast search recovery + compare tools
+        run: |
+          FASTSEARCH_NO_NUMBA=1 python fastsearch_recovery.py selftest
+          python fastsearch_compare.py selftest
+      - name: forced cadence check
+        run: python cadence_forced.py selftest
       - name: archive selection rules
         run: python bl_archive.py selftest
       - name: signal planting and fair matching

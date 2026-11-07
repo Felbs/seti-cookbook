@@ -52,7 +52,8 @@ calibration for everything below.*
   comes back, one-to-one along each signal's track. Finding: turboSETI's
   "SNR 10" is a true SNR of ~40 on raw Green Bank channels (its noise estimate
   includes the bandpass shape), and 90 % recovery of slow-drifting signals
-  needs true SNR ~70.
+  needs true SNR ~70. (These slices straddle two coarse channels, KNOWN_ISSUES
+  #8; re-measured inside one coarse channel, turboSETI needs ~65.)
 - `bl_archive.py` — exact archive selection. The archive matches names by
   prefix (`HIP2` returns 1,982 files of other stars); this keeps exact names,
   real OFF scans ≥ 0.2° away, one session, one band.
@@ -71,6 +72,51 @@ calibration for everything below.*
   exposure by exposure. **3 survivors, 2 inside Earth's water-vapour bands**;
   lines ≳ 12×10⁻¹⁷ erg/s/cm² are caught ~89 % of the time where the method can
   look ([LASER_LINES_RESULT.md](LASER_LINES_RESULT.md)).
+
+**Search-quality tools** — *a faster search, an honest score, and two ways to kill a false alarm*
+- `fastsearch.py` — a single-read narrowband drift search. It searches every
+  drift including exactly 0 (±4.004 Hz/s), adds up each drifting tone over the
+  channels it is smeared across, and writes turboSETI-format `.dat` files. On real
+  Barnard's Star data (one coarse channel, 3,366 planted smeared tones per
+  comparison) it finds 90 % of signals at true SNR **12 / 26 / 62** (0.1 / 1 /
+  3.5 Hz/s), where turboSETI at its default SNR 10 needs ~65 / 510 / 941:
+  **5–20× more sensitive** (E2, method only). On a whole 12.8 GB scan it took
+  11 min with 3 workers and re-found 92 % of turboSETI's hits (95 % with the
+  hit cap raised). No new Barnard's Star limit yet: the full cadence has not been
+  searched with it ([FASTSEARCH_RESULT.md](FASTSEARCH_RESULT.md)).
+- `etap.py` — how many signals does a search actually catch? UCLA's protocol
+  (Margot et al. 2023): plants at any frequency and any drift up to ±8.86 Hz/s at
+  a strength where the search should report SNR 20. Our turboSETI search caught
+  **3.5 % (3.0–4.1 %) of 4,906 plants** in one Barnard's Star scan: every slow
+  signal (< 0.15 Hz/s), almost none faster than 0.5 Hz/s. UCLA measured 5.7 % for
+  a BL-like turboSETI process (quoted, not recomputed); why ours is lower is not
+  yet known. `reach.py --etap ETAP_SUMMARY_GJ699.json` turns it into a
+  transmitter-fraction bound (for one star: no bound) ([ETAP_RESULT.md](ETAP_RESULT.md)).
+- `targets.py` / `targets.json` — all 1,709 stars of Breakthrough Listen's
+  nearby-star list (Isaacson et al. 2017), with distance, motion, whether Earth
+  can be seen crossing the Sun from there (Earth Transit Zone), the exact archive
+  name, whether a fine-res ON/OFF cadence exists, and which BL papers already
+  searched it. **7 stars are in the zone; all 7 have a Green Bank cadence and all
+  7 were already searched by BL** (nearest: Wolf 359, 7.9 ly). What we can add is
+  a re-search with injection-calibrated limits, not new sky. Check: Teegarden's
+  Star comes out in the zone 2048–2498, against the published 2044–2496.
+- `rfi_db.py` — cross-star RFI veto: does *another* star show the same frequency
+  and drift more often than chance? A star is never used against itself. With the
+  full database (seed + Enriquez 2017's 28.9 M hits; ~1.8 GB RAM, so a PC tool)
+  it explains 40.7 % of the 1,029 GJ699 filter-2 rows and wrongly vetoed 0 of 164
+  planted signals in place (0.34 % band-wide). The checked-in seed alone is weak:
+  0.9 % of those rows. blc1 known-answer test: the published intermodulation
+  relatives are there (12/15 positions vs 0/30 controls), but by its own chance
+  test the tool does not veto blc1 in any scan ([RFI_DB_RESULT.md](RFI_DB_RESULT.md)).
+- `cadence_forced.py` — turboSETI calls an OFF scan clean when it *logged* no hit
+  there; this measures every candidate along its predicted track in every scan.
+  On the GJ699 cadence none of the 1,029 ON-only hits passes, and the 9 survivor
+  events (geostationary satellites) sit on the same track in every OFF at SNR
+  29–673. Reliable in quiet spectrum; in crowded bands a sky-like plant came back
+  RFI 6/60 and OFF-OCCUPIED 32/60, so RFI calls there are E1
+  ([FORCED_CADENCE_RESULT.md](FORCED_CADENCE_RESULT.md)).
+- `cadence_verdict.py EVENTS.csv --forced FORCED.csv --rfi-db full` runs both
+  checks beside the band, natural-line and round-number filters.
 
 **The novel detectors** (the ones turboSETI is structurally blind to)
 - `cyclo.py` — **the frontier: a detector for signals turboSETI cannot see.**
