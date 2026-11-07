@@ -35,6 +35,18 @@ jobs:
           python fastsearch_compare.py selftest
       - name: forced cadence check
         run: python cadence_forced.py selftest
+      - name: coarse-channel alignment
+        run: python coarse_align.py selftest
+      - name: one-command cadence run (built-in ON/OFF filter)
+        run: FASTSEARCH_NO_NUMBA=1 python fastsearch_cadence.py selftest
+      - name: periodicity search
+        run: python periodicity.py selftest
+      - name: multi-epoch census
+        run: python tools/epoch_census.py selftest
+      - name: cross-epoch matching and star-frame stacking
+        run: |
+          FASTSEARCH_NO_NUMBA=1 python xepoch.py selftest
+          FASTSEARCH_NO_NUMBA=1 python stack.py selftest
       - name: archive selection rules
         run: python bl_archive.py selftest
       - name: signal planting and fair matching

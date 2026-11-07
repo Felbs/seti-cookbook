@@ -118,6 +118,35 @@ calibration for everything below.*
 - `cadence_verdict.py EVENTS.csv --forced FORCED.csv --rfi-db full` runs both
   checks beside the band, natural-line and round-number filters.
 
+**Stage 3: across dates, stacked, and blinking** — *see [STAGE3_PLAN.md](STAGE3_PLAN.md); heavy full-band runs still to come*
+- `tools/epoch_census.py` — which BL stars were observed on two or more days in
+  the same receiver band, with the telescope really pointed at them. 101 stars
+  qualify (nearest: GJ725). **Barnard's Star has only one L-band date.** Some
+  archive "ON" scans point up to ~9 beams away from the star they are named for
+  (KNOWN_ISSUES #14).
+- `xepoch.py` — moves every hit into the star's own frame, including the star's
+  slowly changing velocity (21.5 Hz/yr for Barnard's Star), drops anything also
+  seen when the telescope looks away, and keeps only tones that return on
+  another date at the same star-frame frequency. Planted tones on three real
+  GJ725 dates: 19/20 matched at SNR 20, 20/20 at 30; telescope-fixed tones never
+  matched. Real GJ725 search (one coarse channel): 35 hits, all also in the OFFs.
+- `stack.py` — adds dates together in the star's frame and *measures* the gain
+  with planted tones (never assumes √N). Hydrogen-line beacon nulls (E2):
+  GJ725 A over three real dates < ~2.8 Jy (~4 GW at 11.5 ly; one plant seed);
+  Barnard's Star, three ON scans of one cadence, < ~5 Jy (~2 GW) for drifts
+  within ±0.05 Hz/s ([XEPOCH_RESULT.md](XEPOCH_RESULT.md)).
+- `periodicity.py` — the pulsar bounty: hunts beacons that blink every 10–70 s
+  by folding every channel of the 1-second mid-resolution files (the
+  fine-frequency files have only 16 snapshots per scan, too few). Finds 90 % of
+  planted pulse trains at SNR 12 in one scan. On Barnard's Star all 84 ON-only
+  events sit in or at the edge of satellite and radar bands: nothing in quiet
+  spectrum (E1) ([PERIODICITY_RESULT.md](PERIODICITY_RESULT.md)).
+- `fastsearch_cadence.py` — one command for a whole six-file cadence: fast
+  search, ON/OFF filter, forced re-measurement, verdict; resumable, with
+  `--dry-run`. fastsearch now labels coarse channels packed with satellite
+  signals BROADBAND (> 100 hits/MHz). `coarse_align.py` cuts data on the
+  telescope's own 2.93 MHz boundaries.
+
 **The novel detectors** (the ones turboSETI is structurally blind to)
 - `cyclo.py` — **the frontier: a detector for signals turboSETI cannot see.**
   A drift search only finds loud narrowband *carriers* — radio like 1950s Earth.
