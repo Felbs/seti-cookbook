@@ -15,7 +15,8 @@ This module is the one place that turns an archive reply into scans:
               ONE data product, alternating ON OFF ON OFF ON OFF, no gap > 20 min
 
     python bl_archive.py GJ699            # list every cadence the archive has
-    python bl_archive.py HIP2             # shows the prefix trap: 0 exact rows
+    python bl_archive.py HIP2             # the prefix trap: thousands of other stars' rows
+                                          # (HIP2 itself has 39 exact rows; limit=2000 returns 18 of them)
     python bl_archive.py selftest         # offline checks of the rules above
 
 Credit: Breakthrough Listen open data (Lebofsky et al. 2019 PASP 131:124505).

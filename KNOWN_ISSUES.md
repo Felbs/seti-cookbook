@@ -27,6 +27,7 @@ Status: **Open** · **Mitigated** (worked around here) · **Won't fix** (upstrea
 ### 6. Some cadences' OFF scans carry other stars' names — Open
 - **Symptom:** Epsilon Eridani (GJ144) has only ON scans under its name; its OFFs are filed under other targets, which the archive cannot be searched for without a name.
 - **Impact:** `bl_archive.py` reports no valid cadence rather than building a wrong one.
+- **Workaround:** `targets.py` `abacad()` rebuilds these cadences from a time-window archive query (`target=%`), with the same session/band/product/gap/separation rules; not yet merged into `bl_archive.py`.
 
 ### 7. Mid-resolution (.0002) drift vetoes are void — Mitigated
 - **Cause:** drift quantum ~9.8 Hz/s, wider than any planet's drift (`drift_audit.py`). `star_sweep.py` prints UNRESOLVED.
