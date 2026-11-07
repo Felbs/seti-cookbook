@@ -41,22 +41,14 @@ SNRS = [10, 15, 20, 25, 30, 40, 50, 70, 100, 140, 200, 300, 400, 600, 800, 1200,
 GBT_NFPC = 1033216
 
 
-def coarse_segment(data, m, nfpc=GBT_NFPC):
-    """Largest part of the slice inside one coarse channel; returns (seg, lo, dc_in_seg)."""
-    ch0 = int(m.get("ch0", 0))
-    nf = data.shape[1]
-    off = ch0 % nfpc
-    first = nfpc - off                       # channels of the first coarse channel in the slice
-    if first >= nf - first:
-        lo, hi, dc = 0, min(first, nf), nfpc // 2 - off
-    else:
-        lo, hi, dc = first, nf, nfpc // 2 - off + nfpc - first
-    seg = np.ascontiguousarray(data[:, lo:hi])
-    if 0 <= dc < seg.shape[1]:               # repair DC like turboSETI's blank_dc does on a real file
-        seg[:, dc] = 0.5 * (seg[:, dc - 1] + seg[:, dc + 1])
-    else:
-        dc = None
-    return seg, lo, dc
+def coarse_segment(data, m, nfpc=None):
+    """Largest part of the slice inside one coarse channel (coarse_align.py); DC spike
+    repaired like turboSETI's blank_dc does on a real file. Returns (seg, lo, dc_in_seg)."""
+    import coarse_align
+    seg, info = coarse_align.coarse_segment(data, int(m.get("ch0", 0)), float(m["foff"]))
+    if nfpc is not None and nfpc != info["nfpc"]:
+        raise ValueError(f"coarse width {info['nfpc']} from foff, {nfpc} asked")
+    return seg, info["lo"], info["dc"]
 
 
 def ts_search(tmp, name, data, m, snr):

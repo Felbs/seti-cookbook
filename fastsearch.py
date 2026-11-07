@@ -43,11 +43,17 @@ quotes an SNR ~4x smaller than the radiometer SNR (#1). This search:
      (~406) channels of a stronger hit;
   7. writes a turboSETI-compatible .dat (find_event_pipeline reads it; its SNR
      column is the detection significance `snr`), a CSV with snr, snr_power,
-     drift, freq at t=0, coarse channel, local noise and a `capped` flag, and a
-     .summary.json. At most --max-hits hits are kept per coarse channel
-     (default 3000); a capped coarse channel is WARNED about on stderr, flagged
-     in the CSV and listed in the summary (the .dat format has no place for it:
-     turboSETI's read_dat parses every line after the 9th as a hit).
+     drift, freq at t=0, coarse channel, local noise and `capped` / `broadband`
+     flags, and a .summary.json;
+  8. marks a coarse channel BROADBAND when it holds >= --broadband-density
+     (default 100) hits per MHz after track suppression, or its list reached
+     --max-hits (default 3000): a quiet channel holds ~1/MHz, the Inmarsat
+     channel 112 of GJ699 0003 ~5,000/MHz (FASTSEARCH_RESULT.md). A BROADBAND
+     channel keeps its strongest --broadband-keep hits (default 3000) and is
+     listed in the summary, the CSV, on .dat header line 7 (which turboSETI's
+     read_dat does not parse) and, via `fastsearch.py flag-events EVENTS.csv
+     --summaries DIR`, as a `fastsearch_broadband` column of find_event's output
+     that cadence_verdict.py prints as a note.
 
 numpy by default; numba is used if installed (same results, faster); cupy only
 with SETI_COOKBOOK_GPU=1 (never required, not verified on real hardware here).
@@ -55,6 +61,7 @@ with SETI_COOKBOOK_GPU=1 (never required, not verified on real hardware here).
     python fastsearch.py selftest
     python fastsearch.py FILE.h5 --max-drift 4 --snr 8 --out-dir out/ [--workers 3]
     python fastsearch.py FILE.h5 --coarse 150-160        # a subset of coarse channels
+    python fastsearch.py flag-events events_f3.csv --summaries out/   # add the BROADBAND column
 """
 import argparse
 import csv
@@ -74,6 +81,11 @@ SUPPRESS_TOL = 2.0    # extra channels in the track-touch test of the suppressio
 N_BANDS = 5           # separate best-per-channel maps for boxcar widths 1, 2-3, 4-7, 8-15, 16+
 GHOST_MARGIN = 1.5    # a touching weaker hit is dropped if snr <= this x what the stronger can leak into it
 MAX_HITS_PER_COARSE = 3000
+BROADBAND_DENSITY = 100.0  # hits per MHz (after track suppression) at which a coarse channel is BROADBAND
+BROADBAND_KEEP = 3000      # ... and then only its strongest BROADBAND_KEEP hits are kept. Measured in the
+                           # Inmarsat coarse channel 112 of GJ699 0003: keeping 300 drops every hit
+                           # below detection SNR ~740 (8+8 plants of true SNR 200 and 800 lost);
+                           # keeping 3000 keeps down to ~115 (all 16 found). FASTSEARCH_RESULT.md
 SCRUNCH_AT = 8      # scrunch by s = 2^j only while s <= w / SCRUNCH_AT (w = smear in channels)
 SCRUNCH_PHASES = 1  # scrunch phases (offsets of s/phases channels)
 SCRUNCH_EXTRA = 0   # extra scrunched channels in the boxcar of a scrunched row
@@ -461,8 +473,20 @@ def local_noise(S, chans, half=4096):
     return out
 
 
+def broadband_stats(best, thr, nf, foff_hz, n_kept):
+    """The measured statistics behind the BROADBAND flag (FASTSEARCH_RESULT.md):
+    hits_per_mhz = hits kept AFTER track suppression (so one strong tone counts
+    once), per MHz of the slab - this one sets the flag; occupancy = fraction of
+    the slab's channels where ANY drift track starting there reaches the
+    threshold - reported only (a few very strong tones raise it: 3 tones of
+    SNR 3000-5000 occupy ~1.9 % of 131k channels)."""
+    occ = float(np.count_nonzero(best.max(0) >= thr)) / max(1, nf)
+    mhz = nf * abs(foff_hz) / 1e6
+    return occ, (n_kept / mhz if mhz > 0 else 0.0)
+
+
 def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="auto", how=None,
-                cap=MAX_HITS_PER_COARSE):
+                cap=MAX_HITS_PER_COARSE, broadband_density=BROADBAND_DENSITY, broadband_keep=BROADBAND_KEEP):
     """Search one coarse channel (or any contiguous block) of shape (nt, nf).
     Returns (hits, info). hit: dict(ch = start channel at t=0, k, drift Hz/s,
     snr = DETECTION significance (the track's boxcar sum minus its width's noise
@@ -471,7 +495,11 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
     drift 0), snr_power = boxcar power over the zero-drift radiometer noise (the
     estimate of the tone's TRUE radiometer SNR, ~2-5x snr for fast drifters),
     w = boxcar width in channels, s = scrunch, local_noise, noise_ratio).
-    info["capped"] is True if the hit list was cut at `cap`."""
+    info["capped"] is True if the hit list was cut at `cap`.
+    info["broadband"] is True if the slab holds >= broadband_density hits per MHz
+    after track suppression (broadband_stats), or the list was cut at `cap`; a
+    broadband slab keeps only its strongest broadband_keep hits, and
+    info["broadband_reason"] says why. broadband_density=None turns the flag off."""
     nt, nf = raw.shape
     step = abs(foff_hz) / ((nt - 1) * tsamp)
     K = int(np.ceil(max_drift / step - 1e-9))
@@ -534,6 +562,14 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
     cb = np.concatenate(cb).astype(int)
     cc_ = np.concatenate(cc_).astype(int)
     keep = select_hits(cc_, bestk[cb, cc_], bestw[cb, cc_], best[cb, cc_], nt, cap=cap)
+    n_kept0 = len(keep)
+    capped = len(keep) >= cap and cc_.size > len(keep)
+    occ, hpm = broadband_stats(best, thr, nf, foff_hz, n_kept0)
+    bb_reason = ""
+    if broadband_density is not None and (hpm >= broadband_density or capped):
+        bb_reason = (f"{hpm:.0f} hits/MHz >= {broadband_density:g}" if hpm >= broadband_density else
+                     f"hit list cut at the cap of {cap}") + f"; occupancy {occ:.4f}"
+        keep = keep[:broadband_keep]          # select_hits returns strongest first
     hits = []
     picks = [(int(cb[i]), int(cc_[i])) for i in keep]
     # a scrunched hit's start is known to its s-channel block: report the block centre
@@ -552,7 +588,8 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
                          snr_power=float(snr * noise[(sc, w // sc)][2] / sig1), w=w, s=sc,
                          local_noise=float(lnz), noise_ratio=float(lnz / sig1)))
     info = dict(K=K, step=step, drift_searched=K * step, sigma1=sig1, n_above=n_above,
-                capped=len(keep) >= cap, cap=cap, calib={f"{a}x{b}": v for (a, b), v in noise.items()},
+                capped=bool(capped), cap=cap, n_kept_before_flag=n_kept0, occupancy=occ, hits_per_mhz=hpm, n_candidates=int(cc_.size),
+                broadband=bool(bb_reason), broadband_reason=bb_reason, calib={f"{a}x{b}": v for (a, b), v in noise.items()},
                 n_drifts_equiv=round(n_drifts, 1), plan=[(sc, band, len(ks)) for sc, band, ks, _ in plan])
     return hits, info
 
@@ -572,7 +609,7 @@ def coarse_width(h, n_coarse=None):
     elif nchans >= 2 ** 20 and nchans % 2 ** 20 == 0:
         n = nchans // 2 ** 20
     elif int(h.get("telescope_id", 0)) == 6:
-        n = int(round(abs(float(h["foff"])) * nchans / GBT_COARSE_MHZ))
+        n = max(1, int(round(abs(float(h["foff"])) * nchans / GBT_COARSE_MHZ)))
     else:
         n = max(1, nchans // 2 ** 20)
     if nchans % n:
@@ -588,7 +625,7 @@ def _deg_str(v, hours):
                        precision=3)
 
 
-def write_dat(path, rows, h, file_id, max_drift_searched, obs_length):
+def write_dat(path, rows, h, file_id, max_drift_searched, obs_length, broadband=()):
     with open(path, "w") as fo:
         fo.write("# -------------------------- o --------------------------\n")
         fo.write(f"# File ID: {file_id} \n")
@@ -598,7 +635,11 @@ def write_dat(path, rows, h, file_id, max_drift_searched, obs_length):
                  f"DEC: {_deg_str(h['src_dej'], False)}\n")
         fo.write(f"# DELTAT: {float(h['tsamp']):10.6f}\tDELTAF(Hz): {float(h['foff'])*1e6:10.6f}\t"
                  f"max_drift_rate: {max_drift_searched:10.6f}\tobs_length: {obs_length:10.6f}\n")
-        fo.write("# --------------------------\n")
+        # header line 7 (index 6) is not parsed by turboSETI's read_dat: it carries the
+        # BROADBAND coarse channels so a reader of the .dat sees them
+        fo.write("# --------------------------" + (
+            f" fastsearch BROADBAND coarse channels (strongest hits only): {' '.join(str(c) for c in broadband)}"
+            if broadband else "") + "\n")
         fo.write("# Top_Hit_# \tDrift_Rate \tSNR \tUncorrected_Frequency \tCorrected_Frequency \tIndex \t"
                  "freq_start \tfreq_end \tSEFD \tSEFD_freq \tCoarse_Channel_Number \tFull_number_of_hits \t\n")
         fo.write("# --------------------------\n")
@@ -610,7 +651,7 @@ def write_dat(path, rows, h, file_id, max_drift_searched, obs_length):
 
 CSV_COLS = ["coarse_chan", "index", "global_chan", "freq_mhz_t0", "freq_mhz_end", "drift_hz_s", "snr",
             "snr_power", "boxcar_w", "local_noise", "noise_ratio", "n_above_in_coarse",
-            "capped"]
+            "capped", "broadband", "occupancy"]
 
 
 def _worker(args):
@@ -636,13 +677,14 @@ def _worker(args):
             t_read = time.time() - t0
             hits, info = search_slab(raw, foff_hz, float(h["tsamp"]), opts["max_drift"], opts["snr"],
                                      dc_idx=(nfpc // 2,), widths=opts["widths"],
-                                     cap=opts.get("max_hits", MAX_HITS_PER_COARSE))
+                                     cap=opts.get("max_hits", MAX_HITS_PER_COARSE),
+                                     broadband_density=opts.get("broadband_density", BROADBAND_DENSITY),
+                                     broadband_keep=opts.get("broadband_keep", BROADBAND_KEEP))
             del raw
-            if info["capped"]:
-                print(f"WARNING: coarse channel {cc}: hit list CUT at the cap of {info['cap']} hits "
-                      f"({info['n_above']} channels above threshold); weaker hits there are missing "
-                      f"(raise --max-hits, or treat the channel as broadband interference)",
-                      file=sys.stderr, flush=True)
+            if info["broadband"]:
+                print(f"NOTE: coarse channel {cc} is BROADBAND ({info['broadband_reason']}; "
+                      f"{info['n_kept_before_flag']} hits before the flag): only its strongest "
+                      f"{len(hits)} hits are kept", file=sys.stderr, flush=True)
             out.append((cc, hits, info, t_read, time.time() - t0))
             if opts.get("verbose"):
                 print(f"  coarse {cc:4d}: {len(hits):5d} hits, read {t_read:5.1f} s, total "
@@ -664,7 +706,8 @@ def chunk_cache_bytes(ds, nfpc):
 
 
 def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_coarse=None,
-             widths="auto", verbose=True, max_hits=MAX_HITS_PER_COARSE):
+             widths="auto", verbose=True, max_hits=MAX_HITS_PER_COARSE, broadband_density=BROADBAND_DENSITY,
+             broadband_keep=BROADBAND_KEEP):
     import h5py
     try:
         import hdf5plugin  # noqa: F401
@@ -685,7 +728,7 @@ def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_co
         workers = max(1, min(workers, int((av - (1 << 30)) // per_slab)))
     t0 = time.time()
     opts = dict(max_drift=max_drift, snr=snr, widths=widths, verbose=verbose, max_hits=max_hits,
-                rdcc_nbytes=cache)
+                rdcc_nbytes=cache, broadband_density=broadband_density, broadband_keep=broadband_keep)
     print(f"{path.name}: {nt} spectra x {int(h['nchans'])} ch = {ncoarse} coarse x {nfpc}; "
           f"{len(todo)} to search with {workers} worker(s), backend {backend()}", flush=True)
     # contiguous runs per worker (a chunk is re-read only at a run boundary)
@@ -713,6 +756,11 @@ def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_co
     K = step = None
     t_read = sum(r[3] for r in results)
     capped = [r[0] for r in results if r[2]["capped"]]
+    broadband = [dict(coarse=r[0], occupancy=round(r[2]["occupancy"], 5), hits_per_mhz=round(r[2]["hits_per_mhz"], 1),
+                      n_candidates=r[2]["n_candidates"], hits_before_flag=r[2]["n_kept_before_flag"],
+                      kept=len(r[1]), reason=r[2]["broadband_reason"])
+                 for r in results if r[2]["broadband"]]
+    occ_all = {int(r[0]): [round(r[2]["hits_per_mhz"], 2), round(r[2]["occupancy"], 6)] for r in results}
     for cc, hits, info, _, _ in results:
         K, step = info["K"], info["step"]
         for hh in hits:
@@ -722,32 +770,67 @@ def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_co
                              freq_end=fr + hh["drift"] * obs_length / 1e6, drift=hh["drift"],
                              snr=hh["snr"], snr_power=hh["snr_power"], w=hh["w"],
                              local_noise=hh["local_noise"], noise_ratio=hh["noise_ratio"],
-                             n_above=info["n_above"], capped=int(info["capped"])))
+                             n_above=info["n_above"], capped=int(info["capped"]),
+                             broadband=int(info["broadband"]), occupancy=info["occupancy"]))
     rows.sort(key=lambda r: -r["freq"] if foff < 0 else r["freq"])
     searched = K * step if K is not None else 0.0
     stem = path.name[:-3] if path.name.endswith(".h5") else path.stem
-    write_dat(out_dir / f"{stem}.dat", rows, h, path.name, searched, obs_length)
+    write_dat(out_dir / f"{stem}.dat", rows, h, path.name, searched, obs_length,
+              broadband=[b["coarse"] for b in broadband])
     with open(out_dir / f"{stem}.fastsearch.csv", "w", newline="") as fo:
         wr = csv.writer(fo)
         wr.writerow(CSV_COLS)
         for r in rows:
             wr.writerow([r["coarse"], r["index"], r["global_chan"], f"{r['freq']:.6f}", f"{r['freq_end']:.6f}",
                          f"{r['drift']:.6f}", f"{r['snr']:.3f}", f"{r['snr_power']:.3f}", r["w"],
-                         f"{r['local_noise']:.6g}", f"{r['noise_ratio']:.3f}", r["n_above"], r["capped"]])
+                         f"{r['local_noise']:.6g}", f"{r['noise_ratio']:.3f}", r["n_above"], r["capped"],
+                         r["broadband"], f"{r['occupancy']:.5f}"])
     wall = time.time() - t0
     import json
     (out_dir / f"{stem}.summary.json").write_text(json.dumps(dict(
         file=path.name, n_hits=len(rows), n_coarse_searched=len(results), threshold_snr=snr,
         snr_column="detection significance (unit spread on noise at every drift); snr_power = true SNR estimate",
         max_hits_per_coarse=max_hits, capped_coarse_channels=capped, drift_searched_hz_s=searched,
+        broadband_rule=f">= {broadband_density} hits per MHz after track suppression, or the hit list cut at "
+                       f"{max_hits}; a BROADBAND coarse channel keeps only its strongest {broadband_keep} hits",
+        broadband_coarse_channels=broadband, hits_per_mhz_and_occupancy_per_coarse=occ_all,
         drift_step_hz_s=step, wall_s=round(wall, 1), backend=backend()), indent=1))
-    if capped:
-        print(f"WARNING: {len(capped)} coarse channel(s) hit the cap of {max_hits} hits and are TRUNCATED: "
-              f"{capped}", file=sys.stderr, flush=True)
+    if broadband:
+        print(f"NOTE: {len(broadband)} BROADBAND coarse channel(s), strongest hits only: "
+              f"{[b['coarse'] for b in broadband]} (listed in {stem}.summary.json, the CSV and .dat line 7)",
+              file=sys.stderr, flush=True)
     print(f"done: {len(rows)} hits in {len(results)} coarse channels, wall {wall/60:.2f} min "
           f"(read {t_read/60:.2f} worker-min); drift searched +-{searched:.4f} Hz/s in steps of "
           f"{step:.6f} (incl. 0); threshold {snr} (detection significance)", flush=True)
-    return rows, dict(wall_s=wall, n_coarse=len(results), drift_searched=searched, step=step, capped=capped)
+    return rows, dict(wall_s=wall, n_coarse=len(results), drift_searched=searched, step=step, capped=capped,
+                      broadband=broadband)
+
+
+def flag_events(events_csv, summary_dir, out=None):
+    """Add a `fastsearch_broadband` column (1/0) to a find_event_pipeline events CSV:
+    1 when that row's coarse channel was BROADBAND in that file's fastsearch run
+    (<stem>.summary.json in summary_dir). In a broadband channel only the strongest
+    hits were kept, so an OFF 'without a hit' there is weaker evidence than elsewhere
+    (KNOWN_ISSUES #9). Returns the number of flagged rows."""
+    import json
+    import pandas as pd
+    d = pd.read_csv(events_csv)
+    bb = {}
+    for sj in Path(summary_dir).glob("*.summary.json"):
+        j = json.loads(sj.read_text())
+        bb[Path(j["file"]).name] = {int(b["coarse"]) for b in j.get("broadband_coarse_channels", [])}
+    if len(d) == 0:
+        d["fastsearch_broadband"] = []
+    else:
+        def one(r):
+            fid = Path(str(r["FileID"])).name
+            fid = fid if fid in bb else fid.replace(".dat", ".h5")
+            return int(int(r["CoarseChanNum"]) in bb.get(fid, set()))
+        d["fastsearch_broadband"] = d.apply(one, axis=1)
+    d.to_csv(out or events_csv, index=False)
+    n = int(d["fastsearch_broadband"].sum()) if len(d) else 0
+    print(f"{events_csv}: {n} of {len(d)} rows in BROADBAND coarse channels -> {out or events_csv}")
+    return n
 
 
 def parse_coarse(s):
@@ -923,6 +1006,33 @@ def selftest():
     hcap, icap = search_slab(d, foff, ts, 4.0, 8.0, dc_idx=(nf // 2,), cap=3)
     checks.append(("cap: list cut at 3 hits is flagged capped", len(hcap) == 3 and icap["capped"]))
     checks.append(("cap: the full list (8 hits, cap 3000) is not flagged", not info["capped"]))
+    checks.append(("cap: a capped list is flagged BROADBAND", icap["broadband"]))
+    checks.append(("quiet slab with 8 plants is not BROADBAND", not info["broadband"]))
+    hs, ist = search_slab(g, foff, ts, 4.0, 8.0)
+    print(f"  strong tones: {ist['hits_per_mhz']:.1f} hits/MHz, occupancy {ist['occupancy']:.4f} -> "
+          f"broadband {ist['broadband']}")
+    checks.append(("3 very strong tones are not BROADBAND", not ist["broadband"]))
+
+    # 3d. broadband shelf: 60,000 channels of structured power switched on in half the
+    #     spectra (a dense comb of intermittent carriers), plus one narrow carrier of
+    #     true SNR 300 inside it. Flagged BROADBAND, only the strongest kept, and the
+    #     narrow carrier is among them.
+    rng = np.random.default_rng(21)
+    bb = _synthetic(rng, nt, nf, dc=False)
+    lo_, hi_ = 20000, 80000
+    pat = (0.4 * np.abs(rng.standard_normal(hi_ - lo_))).astype(np.float32)
+    on = (rng.random(nt) < 0.5).astype(np.float32)
+    bb[:, lo_:hi_] *= 1 + on[:, None] * pat[None, :]
+    pc = [dict(ch=50000.3, drift=-0.3, snr=300)]
+    inject.plant(bb, foff, ts, pc)
+    hbb, ibb = search_slab(bb, foff, ts, 4.0, 8.0, broadband_keep=50)
+    wbb = inject.explain_misses(pc, hbb, inject.match(pc, hbb, foff, ts, nt), foff, ts, nt, 4.0)
+    print(f"  broadband shelf: {ibb['n_kept_before_flag']} hits = {ibb['hits_per_mhz']:.0f}/MHz, occupancy "
+          f"{ibb['occupancy']:.4f}, broadband {ibb['broadband']} ({ibb['broadband_reason']}); kept {len(hbb)}; "
+          f"narrow carrier: {wbb[0]['status']}")
+    checks.append(("broadband shelf is flagged BROADBAND", ibb["broadband"]))
+    checks.append(("broadband channel keeps only its strongest 50", len(hbb) == 50))
+    checks.append(("narrow carrier inside the shelf is kept", wbb[0]["status"] == "found"))
 
     # 4. numpy and numba agree (if numba is here), full-res and scrunched rows
     if how == "numba":
@@ -953,6 +1063,20 @@ def selftest():
                              nifs=1, nbits=32).items():
                 ds.attrs[k] = v
         rows, run = run_file(fn, tmp, 4.0, 8.0, workers=1, n_coarse=2, verbose=False)
+        # same file with every coarse channel forced BROADBAND (density 0): flag in CSV,
+        # summary and .dat line 7; the .dat still parses; flag-events marks the rows
+        tmp2 = tmp / "bb"
+        rows2, run2 = run_file(fn, tmp2, 4.0, 8.0, workers=1, n_coarse=2, verbose=False, broadband_density=0.0)
+        dat2 = list(tmp2.glob("*.dat"))[0]
+        line7 = open(dat2).read().splitlines()[6]
+        back2 = inject.read_dat(dat2, 1500.0, foff / 1e6)
+        checks.append(("forced BROADBAND: listed in summary and .dat line 7, .dat still parses",
+                       len(run2["broadband"]) == 2 and "BROADBAND coarse channels" in line7 and len(back2) == 1))
+        ev = tmp2 / "events.csv"
+        ev.write_text("FileID,CoarseChanNum,Freq\n" + f"{fn.name.replace('.h5', '.dat')},1,1499.9\n"
+                      + "other.dat,1,1499.9\n")
+        nflag = flag_events(ev, tmp2)
+        checks.append(("flag-events marks the row in a BROADBAND channel of that file only", nflag == 1))
         dat = list(tmp.glob("*.dat"))[0]
         back = inject.read_dat(dat, 1500.0, foff / 1e6)
         ok = (len(back) == 1 and abs(back[0]["ch"] - 40000) < 3 and abs(back[0]["drift"] + 0.5) < 0.05)
@@ -964,6 +1088,8 @@ def selftest():
             df = ts_read(str(dat))
             checks.append(("turboSETI's own read_dat parses the .dat",
                            len(df) == len(back) and abs(float(df["DriftRate"].iloc[0]) + 0.5) < 0.05))
+            df2 = ts_read(str(dat2))
+            checks.append(("turboSETI's read_dat parses the .dat with the BROADBAND line", len(df2) == 1))
         except ImportError:
             print("  (turbo_seti not installed: skipped its read_dat check)")
     finally:
@@ -980,13 +1106,25 @@ def selftest():
 def main():
     if sys.argv[1:2] == ["selftest"]:
         return selftest()
+    if sys.argv[1:2] == ["flag-events"]:
+        fp = argparse.ArgumentParser(prog="fastsearch.py flag-events")
+        fp.add_argument("events")
+        fp.add_argument("--summaries", required=True, help="directory with the <stem>.summary.json files")
+        fp.add_argument("--out")
+        b = fp.parse_args(sys.argv[2:])
+        flag_events(b.events, b.summaries, b.out)
+        return 0
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("h5")
     ap.add_argument("--max-drift", type=float, default=4.0)
     ap.add_argument("--snr", type=float, default=8.0,
                     help="threshold on the detection significance (= true radiometer SNR at drift 0)")
     ap.add_argument("--max-hits", type=int, default=MAX_HITS_PER_COARSE,
-                    help="hits kept per coarse channel (a capped channel is warned about and flagged)")
+                    help="hits kept per coarse channel (a capped channel is flagged BROADBAND)")
+    ap.add_argument("--broadband-density", type=float, default=BROADBAND_DENSITY,
+                    help="hits per MHz (after track suppression) that make a coarse channel BROADBAND")
+    ap.add_argument("--broadband-keep", type=int, default=BROADBAND_KEEP,
+                    help="hits kept in a BROADBAND coarse channel (the strongest)")
     ap.add_argument("--out-dir", default=".")
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--coarse", help="e.g. 0-9,150 (default: all)")
@@ -995,7 +1133,7 @@ def main():
                     help="auto = boxcar + scrunch fast drifts; full = boxcar at full resolution; 1 = no boxcar")
     a = ap.parse_args()
     run_file(a.h5, a.out_dir, a.max_drift, a.snr, a.workers, parse_coarse(a.coarse), a.n_coarse, a.widths,
-             max_hits=a.max_hits)
+             max_hits=a.max_hits, broadband_density=a.broadband_density, broadband_keep=a.broadband_keep)
     return 0
 
 
