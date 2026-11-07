@@ -19,6 +19,14 @@ signal and does not match its own Table 3; we gate on the table.)
 
     python reach.py                 # the table
     python reach.py --hours 1       # integrate the hobby rows for an hour
+    python reach.py --etap ETAP_SUMMARY.json --n-stars 1   # transmitter-fraction bound
+
+TRANSMITTER FRACTION (Margot et al. 2023 / Choza et al. 2024 style): with n
+stars searched, a search that recovers a fraction eta_P of plausible signals
+(etap.py) over a fraction D of the drift/band space, finding nothing,
+bounds the fraction of stars with a detectable transmitter at confidence CL:
+
+    f_TX < [1 - (1 - CL)^(1/n)] / (eta_P * D)
 
 Hobby rows are ESTIMATES with every assumption printed. They become
 measurements only when a real capture (hydrogen line, Cas A) confirms the
@@ -54,6 +62,39 @@ def eirp_min_w(s_jy, d_m, dnu_t=1.0):
 def reach_m(s_jy, eirp_w, dnu_t=1.0):
     """Distance at which a transmitter of eirp_w is just detectable."""
     return math.sqrt(eirp_w / (4 * math.pi * s_jy * JY * dnu_t))
+
+
+def f_tx_upper(n_stars, eta_p, D, cl=0.95):
+    """Upper bound on the fraction of stars hosting a transmitter (in the
+    searched band/drift space, above the injection strength), from a null
+    over n_stars with recovery rate eta_p and space fraction D. A value >= 1
+    means no constraint."""
+    if n_stars < 1 or eta_p <= 0 or D <= 0:
+        return math.inf
+    return (1 - (1 - cl) ** (1.0 / n_stars)) / (eta_p * D)
+
+
+def print_ftx(res, n_stars=1, cl=0.95):
+    """res: an etap.py summary (eta_all, D_all, eta_outside_rfi, D_outside_rfi)."""
+    print(f"\nTransmitter-fraction bound, CL {cl:.0%}, n = {n_stars} star(s) "
+          f"(eta_P = UCLA match, |drift| <= 8.86 Hz/s, one scan, post-channelisation plants)")
+    for lab, e, d, ci in (("all band", res["eta_all"], res["D_all"], res.get("eta_all_ci")),
+                          ("outside RFI", res["eta_outside_rfi"], res["D_outside_rfi"],
+                           res.get("eta_outside_rfi_ci"))):
+        f = f_tx_upper(n_stars, e, d, cl)
+        rng = ""
+        if ci:
+            f_hi, f_lo = f_tx_upper(n_stars, ci[0], d, cl), f_tx_upper(n_stars, ci[1], d, cl)
+            rng = f"  (eta_P CI -> {f_lo:.3g} .. {f_hi:.3g})"
+        verdict = f"f_TX < {f:.3g}" if f < 1 else f"bound {f:.3g} >= 1: NO constraint"
+        print(f"  {lab:12s} eta_P {e:.4f}  D {d:.3f}  ->  {verdict}{rng}")
+        if lab == "all band" and res.get("eta_all_note"):
+            print(f"               note: {res['eta_all_note']}")
+    for n in (100, 1000, 10000):
+        if n > n_stars:
+            print(f"  for scale: the same eta_P, D over {n:>5d} stars -> f_TX < "
+                  f"{f_tx_upper(n, res['eta_all'], res['D_all'], cl):.3g} (all band), "
+                  f"{f_tx_upper(n, res['eta_outside_rfi'], res['D_outside_rfi'], cl):.3g} (outside RFI)")
 
 
 def gate():
@@ -97,10 +138,19 @@ def main():
     ap.add_argument("--hours", type=float, default=None,
                     help="integration for the hobby rows (default: 5 min, like BL)")
     ap.add_argument("--snr", type=float, default=25.0)
+    ap.add_argument("--etap", metavar="JSON",
+                    help="etap.py summary JSON: print the f_TX upper bound (all band and outside RFI)")
+    ap.add_argument("--n-stars", type=int, default=1, help="stars searched, for --etap")
+    ap.add_argument("--cl", type=float, default=0.95, help="confidence level, for --etap")
     args = ap.parse_args()
 
     if not gate():
         sys.exit("refusing to print a reach table the gate does not trust")
+    if args.etap:
+        import json
+        with open(args.etap) as fh:
+            print_ftx(json.load(fh), n_stars=args.n_stars, cl=args.cl)
+        return
 
     print(f"\nMinimum detectable EIRP at {F_HZ/1e6:.3f} MHz, SNR {args.snr:g}, 2 pols, 1 Hz-wide signal.")
     print(f"Reference: Arecibo planetary radar ~{fmt_w(L_AO).strip()} (the loudest beam Earth has sent).\n")
