@@ -1,0 +1,98 @@
+{
+ "target": "GJ725",
+ "params": {
+  "tol_hz": 10.0,
+  "tol_topo_hz": 500.0,
+  "tol_star_off_hz": 30.0,
+  "drift_tol": 0.05,
+  "min_ons": 2,
+  "min_epochs": 2,
+  "star_model": "propagated position + rv(t) incl. secular"
+ },
+ "epochs": [
+  {
+   "epoch": "MJD57587",
+   "scans": [
+    "spliced_blc0001020304050607_guppi_57587_20645_Gj725_0015.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57587_20979_Hip90833_0016.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57587_21314_Gj725_0017.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57587_21650_Hip90998_0018.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57587_21987_Gj725_0019.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57587_22324_Hip91203_0020.gpuspec.0000.npz"
+   ],
+   "n_on": 3,
+   "n_off": 3,
+   "v_los_kms": 0.9388332192164763,
+   "K_minus_1_ppm": -5.041457615484468,
+   "clusters": 0
+  },
+  {
+   "epoch": "MJD57667",
+   "scans": [
+    "spliced_blc0001020304050607_guppi_57667_81672_GJ725_0003.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57667_82006_HIP91258_0004.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57667_82339_GJ725_0005.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57667_82675_HIP91315_0006.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57667_83011_GJ725_0007.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57667_83341_HIP91391_0008.gpuspec.0000.npz"
+   ],
+   "n_on": 3,
+   "n_off": 3,
+   "v_los_kms": -3.956418350069279,
+   "K_minus_1_ppm": 11.287726570108347,
+   "clusters": 0
+  },
+  {
+   "epoch": "MJD57804",
+   "scans": [
+    "spliced_blc0001020304050607_guppi_57804_50991_GJ725_0008.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57804_51331_HIP91052_0009.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57804_51671_GJ725_0010.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57804_52017_HIP91065_0011.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57804_52364_GJ725_0012.gpuspec.0000.npz",
+    "spliced_blc0001020304050607_guppi_57804_52693_HIP91136_0013.gpuspec.0000.npz"
+   ],
+   "n_on": 3,
+   "n_off": 3,
+   "v_los_kms": 1.587716296441691,
+   "K_minus_1_ppm": -7.205155116873918,
+   "clusters": 0
+  }
+ ],
+ "coverage_star_mhz": [
+  1419.4496625423799,
+  1422.3529921732747
+ ],
+ "B_hz": 2903329.6308948994,
+ "coverage_note": "per-scan coverage",
+ "counts": {
+  "on_hits": 35,
+  "topo_vetoed": 35,
+  "star_off_vetoed": 0,
+  "outside_coverage": 0,
+  "survivors": 0,
+  "chance_veto_per_on_hit": 0.002388888888888889
+ },
+ "trials": {
+  "cells": 145166.48154474498,
+  "p_i": [
+   0.0,
+   0.0,
+   0.0
+  ]
+ },
+ "false_alarm": {
+  "expected_chance_groups": {
+   "2": 0.0,
+   "3": 0.0
+  },
+  "shift_test": null,
+  "drift_pair_survival": null,
+  "expected_after_drift": {
+   "2": null,
+   "3": null
+  }
+ },
+ "groups": [],
+ "n_pass": 0
+}

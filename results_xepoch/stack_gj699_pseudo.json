@@ -1,0 +1,131 @@
+{
+ "label": "GJ699 2016-03-10, three ON scans as PSEUDO-epochs (one session)",
+ "prereg": {
+  "drifts_hz_s": [
+   -0.05,
+   -0.04,
+   -0.03,
+   -0.02,
+   -0.01,
+   0.0,
+   0.01,
+   0.02,
+   0.03,
+   0.04,
+   0.05
+  ],
+  "window_half_hz": 3000.0,
+  "z_floor": 6.0,
+  "null_percentile": 99.0,
+  "n_null_min": 300,
+  "mask_z": 6.0,
+  "mask_pad": 3
+ },
+ "window_centre_mhz": 1420.4057517679998,
+ "epochs": [
+  "P1",
+  "P2",
+  "P3"
+ ],
+ "epoch_coverage_mhz": [
+  [
+   "P1",
+   1418.7901693513945,
+   1420.9146057015462
+  ],
+  [
+   "P2",
+   1418.7902433957647,
+   1420.9146798567876
+  ],
+  [
+   "P3",
+   1418.7903157199617,
+   1420.9147522892795
+  ]
+ ],
+ "masked_fraction": 0.0,
+ "threshold": 6.0,
+ "threshold_single_epoch": 6.0,
+ "n_null": 351,
+ "null_p99": 5.054387331008911,
+ "window_stack": 3.649658203125,
+ "window_single": [
+  3.745741844177246,
+  4.338573932647705,
+  4.059164047241211
+ ],
+ "window_off_as_on": 4.659667015075684,
+ "off_as_on_false_alarm": 0.002849002849002849,
+ "off_as_on_n": 351,
+ "levels": {
+  "2": {
+   "box_snr_stack": 1.980867166694561,
+   "box_snr_single_epoch": 1.1777282157558975,
+   "gain": 1.6819391266967205,
+   "detect_stack": 0.05,
+   "detect_single_epoch": 0.008333333333333333,
+   "n": 40
+  },
+  "3": {
+   "box_snr_stack": 2.844692745857221,
+   "box_snr_single_epoch": 1.6963432333594406,
+   "gain": 1.6769558718512334,
+   "detect_stack": 0.05,
+   "detect_single_epoch": 0.016666666666666666,
+   "n": 40
+  },
+  "4": {
+   "box_snr_stack": 3.7081494558686114,
+   "box_snr_single_epoch": 2.2147916588131484,
+   "gain": 1.6742655866131066,
+   "detect_stack": 0.3,
+   "detect_single_epoch": 0.041666666666666664,
+   "n": 40
+  },
+  "5": {
+   "box_snr_stack": 4.572282720386284,
+   "box_snr_single_epoch": 2.7335998160451576,
+   "gain": 1.672623290925314,
+   "detect_stack": 0.6,
+   "detect_single_epoch": 0.06666666666666667,
+   "n": 40
+  },
+  "6": {
+   "box_snr_stack": 5.4368881865925145,
+   "box_snr_single_epoch": 3.2525983499570894,
+   "gain": 1.6715522796302968,
+   "detect_stack": 0.925,
+   "detect_single_epoch": 0.15,
+   "n": 40
+  },
+  "8": {
+   "box_snr_stack": 7.164674564718117,
+   "box_snr_single_epoch": 4.289985910387332,
+   "gain": 1.6700927961955092,
+   "detect_stack": 0.975,
+   "detect_single_epoch": 0.44166666666666665,
+   "n": 40
+  },
+  "10": {
+   "box_snr_stack": 8.894116603328671,
+   "box_snr_single_epoch": 5.328042817895234,
+   "gain": 1.6693027641324705,
+   "detect_stack": 0.975,
+   "detect_single_epoch": 0.8416666666666667,
+   "n": 40
+  },
+  "12": {
+   "box_snr_stack": 10.62374747684217,
+   "box_snr_single_epoch": 6.36644283055329,
+   "gain": 1.6687101038365701,
+   "detect_stack": 1.0,
+   "detect_single_epoch": 0.9583333333333334,
+   "n": 40
+  }
+ },
+ "snr90_stack": 6.0,
+ "snr90_single_epoch": 12.0,
+ "verdict": "NULL - nothing above the pre-registered threshold",
+ "plants": 40
+}
