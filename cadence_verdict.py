@@ -18,7 +18,9 @@ not yet explained") - never as a detection.
 
     python cadence_verdict.py data/gj699_cadence/events_f3.csv
     python cadence_verdict.py EVENTS.csv --rfi-db [DB]   # + cross-star RFI database line
-                                                        # (rfi_db.py; DB default = seed)
+        # (rfi_db.py). No DB = the checked-in seed ONLY, which is weak (0.9 % of GJ699
+        # filter-2 rows); "--rfi-db full" adds Enriquez 2017 (needs the reduced 10.8 GB
+        # stream and a few GB of RAM; refused when MemAvailable is too low).
 """
 import sys
 import warnings
@@ -39,8 +41,7 @@ def main(path, rfi_db_path=None):
     if rfi_db_path is not None:
         import rfi_db
         db = rfi_db.default_db(rfi_db_path or None)
-        print(f"RFI database: {db.n:,} hits from {len(db.fam_vocab):,} target families "
-              f"(the event's own target is always left out)")
+        print(rfi_db.describe(db) + "; the event's own target is always left out")
     events = d.groupby("Hit_ID")
     print(f"{path}: {len(d)} rows = {events.ngroups} events "
           f"(each seen in {d.groupby('Hit_ID').size().max()} ON scans)\n")
@@ -87,6 +88,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="explain every event turboSETI's ON/OFF filter leaves")
     ap.add_argument("events", nargs="?", default="data/gj699_cadence/events_f3.csv")
     ap.add_argument("--rfi-db", nargs="?", const="", default=None, metavar="DB",
-                    help="add a cross-star RFI database line (rfi_db.py); DB defaults to the seed")
+                    help="add a cross-star RFI database line (rfi_db.py); no DB = the weak seed only, "
+                         "'full' = seed + Enriquez 2017, or a comma-separated list of DB files")
     a = ap.parse_args()
     sys.exit(main(a.events, a.rfi_db))

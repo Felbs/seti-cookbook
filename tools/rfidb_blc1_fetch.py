@@ -17,6 +17,7 @@ inject.radiometer_noise). Hits are written in rfi_db's schema.
 
     python tools/rfidb_blc1_fetch.py list   [--days 58598,58602]
     python tools/rfidb_blc1_fetch.py fetch  OUT.csv [--days ...] [--windows ...]
+    python tools/rfidb_blc1_fetch.py fetch  CTL.csv --windows ctl   # chance-rate controls
 
 Windows (MHz, +-HALF_KHZ): blc1 at 982.0026 and the three lookalikes Sheikh et
 al. relate to it by multiples of a 2.000004 MHz clock (~712, ~856, ~1062 MHz).
@@ -40,6 +41,13 @@ WINDOWS = {"blc1": BLC1,
            "lk712": BLC1 - 135 * CLOCK,     # 712.0019
            "lk856": BLC1 - 63 * CLOCK,      # 856.0021
            "lk1062": BLC1 + 40 * CLOCK}     # 1062.0026
+# CONTROL windows for the chance rate: half a clock (1.000002 MHz) either side of
+# each lookalike. These are NOT relatives of blc1 (k would be half-integer), so
+# hits there measure how often a drift-compatible hit lands at a fixed spot by
+# chance in the same fetched data. Fetch with --windows ctl (or name them).
+CONTROLS = {f"{n}{s:+d}": WINDOWS[n] + s * CLOCK / 2
+            for n in ("lk712", "lk856", "lk1062") for s in (-1, 1)}
+ALL_WINDOWS = {**WINDOWS, **CONTROLS}
 HALF_KHZ = 5.0
 DRIFT_MAX = 0.5
 SNR_MIN = 10.0
@@ -185,7 +193,10 @@ def main():
                     help="skip short (<~3 min) scans")
     a = ap.parse_args()
     days = {int(d) for d in a.days.split(",")}
-    wins = {k: WINDOWS[k] for k in a.windows.split(",")}
+    names = []
+    for k in a.windows.split(","):
+        names += list(CONTROLS) if k == "ctl" else [k]
+    wins = {k: ALL_WINDOWS[k] for k in names}
     rows = query_paper()
     sel = select(rows, days, {subband_centre(f) for f in wins.values()})
     sel = [x for x in sel if int(x["size"]) >= a.min_size_mb * 1e6]
