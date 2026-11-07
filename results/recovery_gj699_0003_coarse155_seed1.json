@@ -1,0 +1,945 @@
+{
+ "file": "hi_spliced_blc02030405_2bit_guppi_57457_48006_GJ699_0003.gpuspec.0000.npz",
+ "max_drift": 4.0,
+ "snr": 10.0,
+ "seed": 1,
+ "per_cell": 8,
+ "null_hits": 4,
+ "noise_ratio": 3.3970305351242276,
+ "table": {
+  "+0.00|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.00|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.00|40": {
+   "found": 1,
+   "n": 8,
+   "statuses": [
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.00|60": {
+   "found": 1,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found"
+   ]
+  },
+  "+0.00|100": {
+   "found": 7,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.00|200": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.10|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.10|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.10|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.10|60": {
+   "found": 7,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found"
+   ]
+  },
+  "+0.10|100": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.10|200": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.10|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.10|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.10|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.10|60": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.10|100": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.10|200": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.30|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.30|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.30|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.30|60": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.30|100": {
+   "found": 7,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold"
+   ]
+  },
+  "+0.30|200": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.30|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.30|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.30|40": {
+   "found": 1,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.30|60": {
+   "found": 1,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold"
+   ]
+  },
+  "-0.30|100": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.30|200": {
+   "found": 8,
+   "n": 8,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+1.00|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+1.00|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+1.00|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+1.00|60": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+1.00|100": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+1.00|200": {
+   "found": 3,
+   "n": 8,
+   "statuses": [
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "found",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-1.00|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-1.00|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-1.00|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-1.00|60": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-1.00|100": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-1.00|200": {
+   "found": 3,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+2.00|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+2.00|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+2.00|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+2.00|60": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+2.00|100": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+2.00|200": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-2.00|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-2.00|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-2.00|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-2.00|60": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-2.00|100": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-2.00|200": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+3.50|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+3.50|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+3.50|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+3.50|60": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+3.50|100": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+3.50|200": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-3.50|10": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-3.50|20": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-3.50|40": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-3.50|60": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-3.50|100": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-3.50|200": {
+   "found": 0,
+   "n": 8,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  }
+ },
+ "nchan": 749568,
+ "coarse_segment": {
+  "lo": 0,
+  "hi": 749568,
+  "coarse": 155,
+  "dc": 232960,
+  "nfpc": 1033216,
+  "dropped": 299008,
+  "straddled": true
+ }
+}

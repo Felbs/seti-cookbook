@@ -13,3 +13,6 @@ cadence_run.log
 search_*.log
 
 .venv/
+
+# periodicity run outputs: the plain CSVs are regenerated; the .csv.gz copies are committed
+results/periodic_gj699*/*.csv

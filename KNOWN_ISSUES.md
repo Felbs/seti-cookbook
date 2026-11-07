@@ -42,3 +42,22 @@ Status: **Open** · **Mitigated** (worked around here) · **Won't fix** (upstrea
 - **Cause:** an OFF counts as clean when turboSETI logged no hit near it; carrier combs (one hit per neighbourhood) and RFI that changes drift between scans slip through.
 - **Workaround:** `cadence_forced.py` measures every scan along the predicted track (plus a free-drift look in OFFs); `cadence_verdict.py --forced`.
 - **Limit:** in crowded bands an OFF often holds an unrelated carrier near the track. A sky-like ON-only plant 3–20 kHz from a filter-2 hit came back RFI 6/60 and OFF-OCCUPIED 32/60, so a forced RFI call there is E1, not proof the hit is local. NOT-RECOVERED/INCOMPLETE rows were not tested and never count as explained.
+
+### 10. Keeping only the strongest hits in a crowded coarse channel hides weak signals there — Mitigated
+- **Symptom:** in the Inmarsat coarse channel 112 of GJ699 0003 (1545.4–1548.3 MHz) fastsearch finds 14,519 hits at threshold 7 (~5,000 per MHz; a quiet channel holds ~1–2). Keeping the strongest 300 drops everything below detection SNR ~740: 0 of 40 planted −0.12 Hz/s tones of true SNR 50–800 survive. Keeping 3000 keeps down to ~115 (24 of 24 plants of true SNR 200–3000 survive).
+- **Impact:** in such a channel an OFF "without a hit" only means "without a hit among the strongest N"; find_event's ON/OFF test is weaker there (compare #9).
+- **Workaround:** `fastsearch.py` flags these coarse channels BROADBAND (≥ 100 hits/MHz after track suppression, or a capped list) in the CSV, the summary, `.dat` header line 7 and, via `fastsearch.py flag-events`, a `fastsearch_broadband` column that `cadence_verdict.py` prints; the default keeps 3000. Use `cadence_forced.py` (measures every scan) before trusting a filter-3 event there (FASTSEARCH_RESULT.md (d)).
+
+### 11. Fine-resolution products cannot host a periodicity search — Won't fix (physics of the product)
+- **Symptom:** a GBT fine-res scan (.0000) has 16 spectra of 18 s. A period search needs ≥ 9 samples per period and ≥ 3 periods per scan: 162 s ≤ P ≤ 96 s, i.e. nothing.
+- **Workaround:** `periodicity.py` refuses such a range and says why; it runs on mid-res .0002 (1.06 s × 2.86 kHz: 9.5–98 s reachable). High-time-res .0001 (~349 µs) would reach ms periods but is ~1.3 GB per scan for 8 channels per coarse channel (not used). `python periodicity.py reach` prints the ranges.
+
+### 12. periodicity.py's common-mode step removes periodic signals that fill a whole coarse channel — Won't fix (by design)
+- **Cause:** each spectrum is divided by its median over its own 2.93 MHz coarse channel, to remove gain changes that every channel shares. A pulse train covering more than half of a coarse channel is divided out with them.
+- **Impact:** the search is for narrowband (one to a few 2.86 kHz channels) pulse trains; wideband pulsing (and pulsars) is out of scope. `--no-common` turns the step off (its real-data null was not measured).
+- **Also:** the fold-and-boxcar statistic loses signal to phase-bin and period-grid quantisation: 40 synthetic trains of integrated SNR 15, duty 0.1, come back at a median 0.77 of it (selftest). Recovery is quoted against the PLANTED integrated SNR, so the loss is inside every completeness number.
+
+### 13. Fold S/N in impulsive (bursty) channels is not Gaussian: periodicity searches there are blind — Open
+- **Symptom:** in GJ699's mid-res scans ~4,000 channel groups per scan reach fold S/N ≥ 8 (Gaussian expectation ~10⁻⁵), 80 % of them in the Iridium allocation and the rest in other RFI bands. With every block's spectra **shuffled in time** the count is the same (4,531 vs 4,107 in OFF 0004): a few huge samples give a large S/N at any trial period.
+- **Impact:** inside RFI bands `periodicity.py` measures burstiness, not periodicity; an ON/OFF code alone does not separate bursty RFI from a beacon (84 ON-only events, 22 when the OFFs play ON). Outside the bands the null matches Gaussian noise (1 group ≥ 8 in six scans).
+- **Workaround / next:** quote periodicity results for quiet spectrum only; a time-shuffle comparison per candidate (periodic significance over the shuffled value) or a kurtosis veto is the natural fix (not built).

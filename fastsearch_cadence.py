@@ -104,6 +104,9 @@ def plan_text(scans, a):
         per_worker = None
         print(f"  (could not read the first header: {e})")
     lines = [f"cadence: {scans[0]['target']}, product {scans[0]['product']}, {len(scans)} files, {gb:.1f} GB"]
+    if scans[0]["product"] not in ("0000", "?"):
+        lines.append(f"  WARNING: product {scans[0]['product']} is not fine-resolution .0000; drift results on "
+                     f"mid-res .0002 are void (KNOWN_ISSUES #7)")
     for s in scans:
         lines.append(f"  {s['kind']:3s} {s['path'].name}  {s['size'] / 1e9:.2f} GB")
     if ncoarse:

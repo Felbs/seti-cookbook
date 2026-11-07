@@ -2,7 +2,9 @@
 
 > **Evidence level E2 for the sensitivity comparison** (plants in real data, one coarse
 > channel, both searches on the same planted arrays, six seeds). The full-file comparison
-> (b) is E1-grade bookkeeping. The cadence search (c) was **not done**. See [EVIDENCE.md](EVIDENCE.md).
+> (b) is E1-grade bookkeeping. The cadence search (c) was **not done** on real data (the
+> one-command tool is built and selftested). The BROADBAND flag (d) is tool validation on
+> two real coarse channels. See [EVIDENCE.md](EVIDENCE.md).
 > All numbers below are from the current code (row-calibrated statistic); the first
 > version's numbers, which were biased for fast drifts, are no longer quoted.
 
@@ -35,10 +37,13 @@
 6. keeps one best-per-channel map per boxcar-width octave, then suppresses
    neighbours **by track**, not by a fixed ±406-channel window (`select_hits`
    docstring);
-7. keeps at most `--max-hits` hits per coarse channel (default 3000). A capped channel
-   is **warned about** on stderr, flagged in the CSV (`capped` column) and listed in
-   `<file>.summary.json`. (The `.dat` cannot carry the flag: turboSETI's `read_dat`
-   parses every line after the 9th as a hit.)
+7. keeps at most `--max-hits` hits per coarse channel (default 3000), and marks a
+   coarse channel **BROADBAND** when it holds ≥ 100 hits per MHz after track
+   suppression or its list was cut at the cap (section (d) below). A BROADBAND channel
+   keeps its strongest `--broadband-keep` hits (default 3000), and the flag is in the
+   CSV (`broadband`, `occupancy` columns), in `<file>.summary.json`, on `.dat` header
+   line 7 (turboSETI's `read_dat` does not parse it; checked in the selftest) and,
+   through `fastsearch.py flag-events`, in find_event's output (next item).
 8. writes a turboSETI-format `.dat` (turboSETI's own `read_dat` parses it; a review run
    of `find_event_pipeline` on six synthetic files gave exactly the planted ON-only event)
    and a CSV.
@@ -161,17 +166,71 @@ Threshold 7, 3 workers, Nice 19, CPUQuota 300 %, PC otherwise lightly loaded.
   tens of thousands of hits (not built).
   Tables: `results/fastsearch_compare_gj699_0003_cap{3000,50000}.json`.
 
-## (c) Six-file cadence + find_event_pipeline — NOT DONE
+## (c) Six-file cadence + find_event_pipeline — tool READY, real run NOT DONE
 
-All six files were started with an earlier version, then stopped early to protect another
-job on the compute machine. No event list exists from fastsearch yet. The 9
-GEO-satellite events were not re-tested.
+`fastsearch_cadence.py DIR --out-dir OUT` runs the whole chain in one command:
+fastsearch on each of the six files (resumable: a file whose `.dat` and
+`.summary.json` exist with the same threshold is skipped; MemAvailable guard), turboSETI's
+`find_event_pipeline` on the fastsearch `.dat` files (filters 1, 2, 3; scan order and
+ON/OFF roles by `bl_archive.py`'s rules), the `fastsearch_broadband` column on every
+events CSV, `cadence_forced.py run` on filters 2 and 3, and `cadence_verdict.py --forced
+--rfi-db`. `--dry-run` prints the plan with expected time, disk and RAM. Without turboSETI
+it falls back to a small built-in ON/OFF filter of the same shape, labelled "builtin"
+(not turboSETI's code).
+
+Selftest (six tiny synthetic h5 files: a sky-like −0.12 Hz/s tone in the three ONs only,
+an RFI tone in all six, a tone in the OFFs only): with turboSETI 2.3.2 and with the builtin
+filter, filter 3 keeps exactly one event, the sky-like tone; the RFI and OFF-only tones are
+not events; the forced check says PASSES; the verdict prints "1 events, 1 unexplained"
+(correctly: it is a planted sky-like tone); a second run skips every stage. turboSETI lists
+this filter-3 event by its first-ON row only; the builtin lists one row per ON.
+
+All six real files were started with an earlier fastsearch version, then stopped early to
+protect another job on the compute machine. **No real event list exists from fastsearch
+yet**; the 9 GEO-satellite events were not re-tested. The real run needs the PC (77 GB).
+
+## (d) The BROADBAND flag (measured, 2026-11-07)
+
+Statistic: hits per MHz kept **after** track suppression (so one strong tone counts once).
+Reported beside it, not used for the flag: occupancy, the fraction of a coarse channel's
+fine channels where any drift track starting there reaches the threshold.
+
+| data (threshold 7) | hits kept (no cap) | hits per MHz | occupancy | BROADBAND |
+|---|---|---|---|---|
+| GJ699 0003 coarse 155, 749,568 ch (quiet, holds the Galactic HI line) | 3 | 1.4 | 0.09 % | no |
+| GJ699 0004 (OFF) same channels | 5 | 2.4 | 0.11 % | no |
+| GJ699 0003 coarse 112 (1545.4–1548.3 MHz, Inmarsat; capped in run (b)) | 14,519 | 4,955 | 35 % | yes |
+| selftest: 8 plants in synthetic noise (131k ch) | 8 | 22 | — | no |
+| selftest: 3 tones of true SNR 3000–5000 + one of 40 | 4 | 11 | 1.9 % | no |
+| selftest: 60,000-channel shelf of intermittent structured power | 991 | 2,666 | 1.2 % | yes |
+
+The threshold, 100 hits/MHz (293 hits in a 2.93 MHz coarse channel), sits ~40× above the
+quiet channels and ~50× below the Inmarsat channel. Occupancy was rejected as the flag:
+three very strong tones raise it to 1.9 % of a 131k-channel slab, above a
+broadband-like 1.2 % shelf. Only two real coarse channels were measured
+(coarse 112 was range-read, 66 MB); the distribution over all 256 is **not measured** (the
+PC run of (c) will give it in `<file>.summary.json`).
+
+**What keeping the strongest N costs**, measured in coarse 112 (8 plants of each strength
+at −0.12 Hz/s, threshold 7; true SNR 50–800 for N = 300, 200/800/3000 for the others):
+
+| hits kept | weakest kept (detection SNR) | plants found |
+|---|---|---|
+| strongest 300 | ~740 | 0 of 40 (true SNR 50, 100, 200, 400, 800) |
+| strongest 3000 (default) | ~115 | 24 of 24 |
+| all (14,520–14,524, no cap) | 7 | 24 of 24 |
+
+So in the busiest channels a weak narrowband signal survives only if the list is long; the
+default keeps 3000 (the old cap) and the flag tells find_event users that "no hit in this
+OFF" there means "no hit among the strongest 3000". In the selftest shelf a narrow carrier
+of true SNR 300 is kept among the strongest 50.
 
 ## Not verified
 
 - GPU (cupy) path: never run.
 - The cadence (c) and `find_event_pipeline` on real fastsearch `.dat` files (only on six
-  synthetic files, in review).
+  synthetic files, in the selftest).
+- The BROADBAND threshold on all 256 coarse channels (two real channels measured).
 - Completeness outside coarse channel 155; plants at |drift| > 3.5 Hz/s; a second
   observing session; full-file runs of the other five scans with the current code.
 - The scrunch cost (6–15 % at 1.5–3.5 Hz/s) was measured with the first version only.
@@ -182,3 +241,6 @@ GEO-satellite events were not re-tested.
     python fastsearch_recovery.py selftest
     python fastsearch_compare.py selftest
     python fastsearch.py FILE.h5 --max-drift 4 --snr 7 --workers 3 --out-dir out/ [--max-hits 3000]
+    python fastsearch.py flag-events events_f3.csv --summaries out/
+    python fastsearch_cadence.py selftest
+    python fastsearch_cadence.py DIR --out-dir OUT --snr 7 --workers 3 --dry-run

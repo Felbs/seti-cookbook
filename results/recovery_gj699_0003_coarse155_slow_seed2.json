@@ -1,0 +1,669 @@
+{
+ "file": "hi_spliced_blc02030405_2bit_guppi_57457_48006_GJ699_0003.gpuspec.0000.npz",
+ "max_drift": 4.0,
+ "snr": 10.0,
+ "seed": 2,
+ "per_cell": 12,
+ "null_hits": 4,
+ "noise_ratio": 3.3970305351242276,
+ "table": {
+  "+0.05|40": {
+   "found": 1,
+   "n": 12,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.05|50": {
+   "found": 11,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found"
+   ]
+  },
+  "+0.05|60": {
+   "found": 11,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.05|70": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.05|80": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.05|100": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.05|40": {
+   "found": 2,
+   "n": 12,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold"
+   ]
+  },
+  "-0.05|50": {
+   "found": 10,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found"
+   ]
+  },
+  "-0.05|60": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.05|70": {
+   "found": 9,
+   "n": 12,
+   "statuses": [
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.05|80": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.05|100": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.12|40": {
+   "found": 2,
+   "n": 12,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "found",
+    "below-threshold"
+   ]
+  },
+  "+0.12|50": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.12|60": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.12|70": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.12|80": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.12|100": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.12|40": {
+   "found": 2,
+   "n": 12,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.12|50": {
+   "found": 10,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.12|60": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.12|70": {
+   "found": 11,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found"
+   ]
+  },
+  "-0.12|80": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.12|100": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.15|40": {
+   "found": 1,
+   "n": 12,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "+0.15|50": {
+   "found": 9,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold"
+   ]
+  },
+  "+0.15|60": {
+   "found": 10,
+   "n": 12,
+   "statuses": [
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold"
+   ]
+  },
+  "+0.15|70": {
+   "found": 11,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.15|80": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "+0.15|100": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.15|40": {
+   "found": 0,
+   "n": 12,
+   "statuses": [
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold",
+    "below-threshold"
+   ]
+  },
+  "-0.15|50": {
+   "found": 10,
+   "n": 12,
+   "statuses": [
+    "found",
+    "below-threshold",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.15|60": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.15|70": {
+   "found": 10,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "below-threshold",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.15|80": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  },
+  "-0.15|100": {
+   "found": 12,
+   "n": 12,
+   "statuses": [
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found",
+    "found"
+   ]
+  }
+ },
+ "nchan": 749568,
+ "coarse_segment": {
+  "lo": 0,
+  "hi": 749568,
+  "coarse": 155,
+  "dc": 232960,
+  "nfpc": 1033216,
+  "dropped": 299008,
+  "straddled": true
+ }
+}
