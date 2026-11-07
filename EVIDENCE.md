@@ -32,6 +32,7 @@ a limit is worth):
 | Barnard's Star full cadence 1.1–1.9 GHz | GJ699_CADENCE_RESULT.md | **E2** (slow drifts), E1 above 0.5 Hz/s | — | null < ~56 Jy ≈ 22 GW for \|drift\| ≤ 0.15 Hz/s; completeness measured in one coarse channel, noise ratio band-wide |
 | Barnard's Star keyed carriers | `keying.py` | E1 | — | selftest on real noise; no completeness curve yet |
 | SDSS laser lines, 199 stars | LASER_LINES_RESULT.md | E2 | 1 (3 survivors) | 2 of 3 in telluric bands (post hoc); follow-up needs new spectra |
+| fastsearch vs turboSETI sensitivity | FASTSEARCH_RESULT.md | E2 (method) | — | one coarse channel of GJ699 0003, 6 seeds, same null-hit level: 90 % at true SNR 11 vs 62 (0.1 Hz/s), 40 vs 1406 (3.5 Hz/s); no cadence result yet |
 
 ## Rules
 
