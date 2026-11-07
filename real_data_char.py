@@ -21,7 +21,7 @@ import cyclo
 import comb
 import entropy
 
-SRC = HERE.parent      # Z:\src
+SRC = HERE.parent      # parent folder holding grid-atlas/
 
 # (path, label, kind, is_digital) — kind is the ground-truth modulation
 CAPTURES = [

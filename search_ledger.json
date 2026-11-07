@@ -2,7 +2,7 @@
   "runs": [
     {
       "when": "2026-07-30T14:53:34.027137+00:00",
-      "path": "Z:\\src\\setiTuna\\data\\Voyager1.single_coarse.fine_res.h5",
+      "path": "data/Voyager1.single_coarse.fine_res.h5",
       "file": "Voyager1.single_coarse.fine_res.h5",
       "target": "Voyager1",
       "recipe": "doppler_coherence",

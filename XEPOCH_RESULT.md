@@ -1,8 +1,8 @@
 # Cross-epoch matching and epoch stacking in the star frame — 2026-11-06
 
-> **Evidence levels:** star-frame stacks **E2** (GJ699 three-scan pseudo-epoch
-> stack: null < ~4.2 Jy ≈ 1.7 GW; GJ725 A three REAL dates: null < ~2.8 Jy ≈
-> 4.1 GW, both for a hydrogen-line beacon in the star's frame); cross-epoch
+> **Evidence levels:** star-frame stacks **E2** (GJ699 stack of three ON scans of one
+> cadence, not epochs: null < ~5 Jy ≈ 2 GW; GJ725 A three REAL dates: null <
+> ~2.8 Jy ≈ 4.1 GW, one plant seed; both for a hydrogen-line beacon in the star's frame); cross-epoch
 > matching: tool validation by injection on real noise (GJ699 pseudo-epochs,
 > GJ725 three real dates) plus a real three-date GJ725 run with 0 survivors in
 > one coarse channel; census: archive metadata (no E-level). See EVIDENCE.md.
@@ -216,19 +216,23 @@ scan, star-frame-fixed, in all three ONs):
 | 10 | 8.89 | 5.33 | 1.67 | 98 % | 84 % |
 | 12 | 10.62 | 6.37 | 1.67 | 100 % | **96 %** |
 
-**Measured gain 1.67 against an ideal sqrt(3) = 1.73** (97 %): the loss is
-the star-frame interpolation between scans whose grids are offset by Earth's
-rotation (~37 Hz between scans). 90 % detection moves from true SNR 12 per
-scan (one pseudo-epoch) to **6 per scan** (stack). With BL's SEFD 10 Jy, 2.84 Hz
+**Measured gain 1.67 against an ideal sqrt(3) = 1.73** (97 %), within the estimator's scatter (σ ≈ 0.11 from a Monte Carlo of
+`snr_gain`; a second plant layout gives 1.71); no loss is resolved. 90 %
+detection moves from true SNR 12 per scan (one pseudo-epoch) to **6-8 per
+scan** (stack; 6 is 92.5 % with plant seed 5 and 80 % with seed 6). With BL's SEFD 10 Jy, 2.84 Hz
 channels and 288 s scans (`reach.py`, 1 Hz signal), that is
 
 > no hydrogen-line beacon held at 1420.405752 MHz in Barnard's Star's frame,
 > steady through the three 5-minute ON scans of 2016-03-10, brighter than
-> ~4.2 Jy (~1.7 GW EIRP at 5.96 ly), at 90 % completeness.
+> ~5 Jy (~2 GW EIRP at 5.96 ly), at 90 % completeness (the 90 % point lies
+> between true SNR 6 and 8 per scan: 92.5 % at 6 with plant seed 5, 80 % with
+> seed 6).
 
-Compare hi_starframe's single-scan E2 null (< ~12 Jy ≈ 5 GW, which divides by
-a 0.68 planting efficiency that the smeared setigen plants here do not need;
-the same per-scan SNR 12 here would be 8.4 Jy). Same night, same 15 minutes:
+Compare hi_starframe's single-scan E2 null (< ~12 Jy ≈ 5 GW, set by a threshold
+of 10, a ±0.3 Hz/s drift grid and two windows; here the threshold is 6, the
+drift grid ±0.05 Hz/s and there is one window). This stack's own one-scan
+90 % point (true SNR 12) is 8.4 Jy, so like for like the stack takes 8.4 Jy
+to ~5 Jy, for a narrower beacon class. Same night, same 15 minutes:
 this is a deeper limit on the same data for a beacon that is on in all three
 scans, not a new date.
 
@@ -269,8 +273,12 @@ windows above threshold = **0.29 % per window**.
 
 **Measured gain 1.83 for 3 real dates (ideal sqrt 3 = 1.73).** The same 40
 plant places and the same noise are used at every level, so the levels are
-not independent; the excess over sqrt(3) (+6 %) is within the sampling error
-of 40 plants (not bootstrapped). 90 % detection moves from true SNR 6 per scan
+not independent; the excess over sqrt(3) (+6 %) is about 0.9σ of the estimator's
+scatter (σ ≈ 0.11, Monte Carlo of `snr_gain`; the scatter is set by the MAD
+of the 400 empty boxes, reused at every level, which is why the gain is
+identical at every level). An excess over sqrt(N) is not physical for an
+equal-weight power stack; the limit uses detection fractions, not the gain.
+90 % detection moves from true SNR 6 per scan
 (one date) to **4 per scan** (three dates), i.e.
 
 > no hydrogen-line beacon held at 1420.405752 MHz in GJ725 A's frame, on
@@ -278,6 +286,7 @@ of 40 plants (not bootstrapped). 90 % detection moves from true SNR 6 per scan
 > brighter than ~2.8 Jy (~4.1 GW EIRP at 11.49 ly), 90 % complete.
 > **Evidence level E2** (planted, smeared, same pipeline, OFF-as-ON control);
 > one frequency convention, ±3 kHz, a beacon steady on all three dates.
+> The 2.8 Jy limit rests on a single plant seed.
 
 ## 4. Cross-epoch matching on three REAL dates: GJ725, L band
 
@@ -329,8 +338,13 @@ not the matching. Chance veto of a unique tone: 0.4-1.0 % per ON hit
 - No real multi-date search of GJ699: the archive has one L-band date.
 - Cross-epoch matching on real data covered ONE coarse channel (2.9 MHz) of
   GJ725 L; the full band needs the PC.
-- The stack's gain was measured with 40 plants and not bootstrapped; the
-  three-date 1.83 vs sqrt(3) = 1.73 excess is assumed to be sampling error.
+- The stack's gain was measured with 40 plants; the three-date 1.83 vs
+  sqrt(3) = 1.73 excess is about 0.9σ of the estimator's scatter (σ ≈ 0.11,
+  Monte Carlo of `snr_gain`; the scatter is set by the MAD of the 400 empty
+  boxes, reused at every level, which is why the gain is identical at every
+  level). An excess over sqrt(N) is not physical for an equal-weight power
+  stack; the limits use detection fractions, not the gain. The GJ725 2.8 Jy
+  limit rests on a single plant seed.
 - The stack and the matcher test one beacon class: fixed in the star's
   frame. A transmitter on a planet that does not correct for its own orbit is
   not tested; the intrinsic-drift grid (±0.05 Hz/s) is only a tolerance.

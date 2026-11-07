@@ -37,6 +37,9 @@ With BL's published SEFD (10 Jy) that is:
 > **no steady, narrowband (~1 Hz) hydrogen-line beacon in Barnard's Star's
 > frame brighter than ~12 Jy — about 5 GW aimed at us — was on during those
 > three 5-minute scans in March 2016.**
+>
+> The 90 % is per scan; the detection rule needs all three ONs (≈ 78 % at
+> measured SNR 12), so the limit for that rule is ~12-16 Jy (~5-6 GW).
 
 That is 1/2000 of the Arecibo planetary radar. Caveat (2026-11-06 peer review): the planted
 tones were not smeared within each 18 s spectrum. At the injected drift (Earth's −0.114 Hz/s,

@@ -108,7 +108,10 @@ slow drifts and largest for fast ones. fastsearch's own points are tight (±10 %
 turboSETI's are poorly determined: its curve flattens near 90 %, so its bootstrap ranges
 span up to 3×, and the gain at a given drift is uncertain by the same amount. The first
 version claimed 40 at 3.5 Hz/s. Part of that came from its biased statistic; the honest
-figure is 59–62. Raw tables: `results/fastsearch_recovery_gj699_0003_ts{10,5}.json`
+figure is 59–62. Caveat: all of this was measured on the 72.5 % of coarse channel 155 that the slice
+holds (one roll-off edge only), where turboSETI's noise is 3.40× radiometer instead of
+4.35× on a full coarse channel; turboSETI's points here (e.g. 65 [57–81] at 0.1 Hz/s)
+are therefore optimistic for real turboSETI runs (≈ ×1.3). Raw tables: `results/fastsearch_recovery_gj699_0003_ts{10,5}.json`
 (`python fastsearch_recovery.py summary results/...json`).
 
 Where the gain comes from (synthetic, `fastsearch.py` modes): true radiometer noise

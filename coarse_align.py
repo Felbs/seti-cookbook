@@ -6,7 +6,10 @@ makes coarse channels of 2.9296875 MHz, then each is split into fine channels.
 Every coarse channel has its own bandpass roll-off at both edges and a DC spike
 at its centre. A search slice that crosses a coarse boundary therefore holds a
 roll-off notch in the middle and a DC spike where the search does not expect
-it (KNOWN_ISSUES #8).
+it (KNOWN_ISSUES #8). The converse also bites: a cut that keeps only part of
+a coarse channel (one roll-off) underestimates turboSETI's noise ratio (3.40x
+radiometer on 72.5 % of GJ699 coarse 155 vs 4.35x on the full channel), so
+calibrate turboSETI on full coarse channels.
 
 How many fine channels make one coarse channel (the rule blimpy uses):
   * nchans a multiple of 2^20 and >= 2^20     -> 2^20 per coarse channel;

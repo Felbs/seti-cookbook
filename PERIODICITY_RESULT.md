@@ -107,7 +107,7 @@ without candidates of their own.
 Six mid-res scans, ON OFF ON OFF ON OFF (2016-03-10, 1.1–1.9 GHz). Every ON
 fundamental ≥ 8 (11,230 after merging the same signal seen from two ONs) was folded in all
 six scans (`results/periodic_gj699/`, 496 s of forced folds with a coarse-channel cache;
-the six searches took 334–509 s each with 2 workers on a 4-core laptop):
+the six searches took 334–509 s each with 2 workers on a 4-core machine):
 
 | verdict | ON scans as ON | null: OFF scans play ON |
 |---|---|---|
@@ -115,18 +115,21 @@ the six searches took 334–509 s each with 2 workers on a 4-core laptop):
 | PARTIAL (not in every ON) | 1,296 | 1,428 |
 | **ON-ONLY (`101010`)** | **84** | **22** (`010101`) |
 
-The 84 ON-only events: 70 in the Iridium allocation, 5 in the air-surveillance radar band
-(one at 1373.87 MHz), 2 Inmarsat, 1 GNSS L1, and **6 at 1626.70–1626.72 MHz**, within
+The 84 ON-only events: 70 in the Iridium allocation, 5 at 1373.875-1373.880 MHz (one
+channel cluster, several period trials) in the air-surveillance radar band, among IN-OFF
+neighbours at 1373.53-1373.93 MHz, 2 Inmarsat, 1 GNSS L1, and **6 at 1626.70–1626.72 MHz**, within
 four channels of each other, 0.2 MHz above the listed Iridium edge (1626.5 MHz) — one
 emitter at the edge of the Iridium band, not in our band list (post hoc, so this is E1). None is in
 quiet spectrum. With the OFF scans playing ON the same filter passes 22 OFF-only events,
 all in the Iridium, Inmarsat and AMT bands: bursty RFI happens to line up with one role
-or the other at a rate of tens per cadence. Most of the ON-only events show snr 50–240 in
+or the other at a rate of tens per cadence. About half (40 of 84) show snr 50–240 in
 one ON and ~8–20 in another; an emitter that is bursty for 30 minutes gives exactly that.
 
 **Verdict: no periodic pulse train with 10 ≤ P ≤ 70 s from Barnard's Star in quiet
 spectrum** (outside the listed bands and 1610–1700 MHz) above integrated SNR ~12 per scan
-(90 % completeness, duty 0.1, measured in three bands of one scan). Inside the RFI bands the
+for single-scan detection (90 %, duty 0.1, measured in three bands of one scan); the
+completeness of the three-ON `101010` cadence code is not measured (≈ 75 % at 12 if scans
+are independent). Inside the RFI bands the
 search is blind (impulsive channels). The 84 ON-only events are all in or at the edge of
 satellite and radar allocations and are not listed as candidates; the cadence null (22)
 shows the ON/OFF test alone cannot separate them. This is E1: completeness was measured

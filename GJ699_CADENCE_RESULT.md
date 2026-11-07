@@ -86,7 +86,7 @@ Requiring the tone in all three ONs raises the slow-drift figure to about true
 SNR 80: **S ≲ 56 Jy, EIRP ≲ 22 GW for slow drifts.** No plant was lost to a wrong
 drift or a stronger neighbour; every miss was too faint.
 
-**Re-measured inside one true coarse channel (2026-11-07).** The slice used above
+**Re-measured inside the 72.5 % of coarse channel 155 that the slice holds (one roll-off edge only) (2026-11-07).** The slice used above
 (2^20 channels from `hi_starframe.py`) straddles two coarse channels (KNOWN_ISSUES
 #8): turboSETI saw a coarse-edge roll-off and the next channel's start inside it, and
 blanked its DC channel at the slice centre instead of at the real spike. `recovery.py`
@@ -104,15 +104,13 @@ the real spike (`coarse_align.py`). Same settings, same grids, scored the same w
 | 3.5 | 1486 | 919 | |
 
 (Brackets: 95 % bootstrap, plants resampled within cells. Rows 0.5–3.5 come from a
-200/400/800/1600 grid, so they are coarse.) turboSETI's noise is now 3.40× the radiometer
-noise instead of 4.26×, because the roll-off no longer inflates its spread; that is most of
-the change. So the per-scan 90 % point for slow drifts is **~55, not ~70** (−20 %, outside
-both bootstrap ranges). `fastsearch_recovery.py`'s turboSETI arm on the same segment, a
-different plant layout and SNR grid, gave 65 [57–81] at 0.1 Hz/s (FASTSEARCH_RESULT.md),
-so the honest per-scan range is ~50–80. **The headline limit above (≲ 56 Jy, ≲ 22 GW) is
-kept as the conservative end of that range.** Scaled the same way (×80/70 for all three
-ONs, not itself re-measured), the aligned measurement alone would give ≈ 63 → ≈ 44 Jy,
-≈ 18 GW. Still one coarse channel of one scan.
+200/400/800/1600 grid, so they are coarse.) turboSETI's noise on this partial channel is 3.40×
+radiometer; on a full coarse channel rebuilt with both roll-offs it is 4.35× (4.26× on the
+old slice), so for real turboSETI runs the per-scan 90 % point scales back to ≈ 70.
+(`fastsearch_recovery.py`'s turboSETI arm, on the same partial segment with a different
+plant layout and SNR grid, gave 65 [57–81] at 0.1 Hz/s, FASTSEARCH_RESULT.md; it carries
+the same caveat.) **The headline ≲ 56 Jy / ≲ 22 GW stands as the central estimate.**
+Still part of one coarse channel of one scan.
 
 **Correction (2026-11-06).** This file first quoted "S ≲ 7 Jy, ~3 GW" from the
 radiometer equation at SNR 10. That is ~8× too optimistic, for two reasons found
