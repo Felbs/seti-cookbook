@@ -42,3 +42,33 @@ Status: **Open** · **Mitigated** (worked around here) · **Won't fix** (upstrea
 - **Cause:** an OFF counts as clean when turboSETI logged no hit near it; carrier combs (one hit per neighbourhood) and RFI that changes drift between scans slip through.
 - **Workaround:** `cadence_forced.py` measures every scan along the predicted track (plus a free-drift look in OFFs); `cadence_verdict.py --forced`.
 - **Limit:** in crowded bands an OFF often holds an unrelated carrier near the track. A sky-like ON-only plant 3–20 kHz from a filter-2 hit came back RFI 6/60 and OFF-OCCUPIED 32/60, so a forced RFI call there is E1, not proof the hit is local. NOT-RECOVERED/INCOMPLETE rows were not tested and never count as explained.
+
+## Step 3: cross-epoch work (epoch_census, xepoch, stack)
+
+Numbers 10-14 below may be renumbered when merged with other Step 3 branches.
+
+### 10. Some archive "ON" scans point far from the star they are named after — Open
+- **Symptom:** `tools/epoch_census.py` compares every ON scan's archive pointing (`ra`/`decl`, which agree with the file header's `src_raj`/`src_dej` where checked) with the star's position propagated to the scan date. GJ65A's two L-band sessions (MJD 57573 and 57579) point at Dec −16.730° while UV Ceti is at −17.951°: 73' away, ~9 beams at 1.5 GHz. Same pattern in the same projects (AGBT16A_999_232/233/236/237) for GJ54.1 (79'), HIP103039 (76'), HIP101027 (57'), HIP1242 (24'), HIP104139 (12.7') and GJ866 (5.8'); some single S-band sessions too (HIP42333 56', HIP14954 17.1', HIP12444 13.7', HIP11783 11.2').
+- **Cause:** unknown; the archive metadata and the header agree, so either the telescope pointed there or both copied the same wrong coordinates.
+- **Impact:** a search of those scans is not a search of that star; a multi-epoch census that ignores it ranks GJ65A first.
+- **Workaround:** the census flags `pointing_ok = false` when the offset exceeds half the GBT beam (12.45'/f_GHz) and counts `n_days_pointing_ok`; `xepoch.py fetch` skips such sessions.
+
+### 11. SIMBAD's rvz_radvel is not always a stellar radial velocity — Mitigated
+- **Symptom:** targets.json has GJ866 at RV = 6,824.7 km/s.
+- **Impact:** a star-frame frequency off by ~32 MHz at 1.42 GHz; a secular term computed with it is meaningless.
+- **Workaround:** the census flags `rv_ok = false` beyond ±600 km/s; `xepoch.Star.from_targets` refuses such a star unless an RV is given by hand.
+
+### 12. The star frame between dates needs the star's motion, not its J2000 entry — Mitigated
+- **Symptom:** for Barnard's Star a beacon fixed in the star frame, converted with the J2000 direction and a constant RV (what a pipeline using one SIMBAD position does), lands 465, 368 and 494 Hz from where it should on 2016-03-10, +200 d and +700 d - ~100 Hz scatter between dates, 10× a 10 Hz matching tolerance.
+- **Cause:** the direction moves 10.4"/yr (Earth's velocity projected on it changes by ±11 m/s by 2016) and the RV changes by the secular (perspective) acceleration mu^2 d = +4.54 m/s/yr, 21.5 Hz/yr at 1420 MHz (checked: astropy's propagated RV equals mu^2 d).
+- **Workaround:** `xepoch.frame` propagates position and RV to every scan's mid-time (astropy `apply_space_motion`); `xepoch.py selftest` shows the naive frame loses a three-date beacon that the full model finds. The absolute star-frame frequency still carries the RV's own error (±0.5 km/s = ±2.4 kHz) and the RV's unknown reference epoch (up to ~80 m/s for Barnard's Star); both are constant between dates and do not affect matching.
+
+### 13. A topocentric OFF veto of ±500 Hz kills unique tones by chance in crowded bands — Mitigated
+- **Symptom:** a tone that IS only in the ON is vetoed whenever any OFF hit of the same session lies within ±500 Hz of it (where it sits, or where its drift carries it).
+- **Impact:** measured per ON hit on real data: 0.7 % over the whole 1.1-1.9 GHz GJ699 turboSETI hit lists, 0.2-0.8 % in the quiet hydrogen-line coarse channel; much worse in dense RFI bands.
+- **Workaround:** `xepoch.analyse` reports the chance-veto probability per ON hit (random frequencies through the same vetoes); quote completeness from injections through the full chain (XEPOCH_RESULT.md), never from detection alone.
+
+### 14. Two dates can be blind to each other — Mitigated
+- **Symptom:** dates almost exactly a year apart can have nearly the same Earth velocity toward the star: for Barnard's Star 2016-03-10, +365.25 d and +730.5 d differ by only 0.2-0.5 km/s, so a topocentric tone and a star-frame tone move by < 1 kHz between those dates.
+- **Impact:** such a pair cannot tell local interference from a star-fixed tone.
+- **Workaround:** `xepoch.analyse` marks a group UNTESTABLE when two of its dates differ by less than 2 × the topocentric veto width in star-frame offset; it never counts as a PASS.
