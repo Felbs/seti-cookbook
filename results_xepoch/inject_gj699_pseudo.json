@@ -1,0 +1,152 @@
+{
+ "kind": "pseudo-epochs: one real GJ699 session (2016-03-10), relabelled +0/+200/+400 d",
+ "n_epochs": 3,
+ "min_ons": 1,
+ "files": [
+  "hi_spliced_blc02030405_2bit_guppi_57457_48006_GJ699_0003.gpuspec.0000.npz",
+  "hi_spliced_blc02030405_2bit_guppi_57457_48334_GJ699_OFF_0004.gpuspec.0000.npz",
+  "hi_spliced_blc02030405_2bit_guppi_57457_48661_GJ699_0005.gpuspec.0000.npz",
+  "hi_spliced_blc02030405_2bit_guppi_57457_48988_GJ699_OFF_0006.gpuspec.0000.npz",
+  "hi_spliced_blc02030405_2bit_guppi_57457_49314_GJ699_0007.gpuspec.0000.npz",
+  "hi_spliced_blc02030405_2bit_guppi_57457_49640_GJ699_OFF_0008.gpuspec.0000.npz"
+ ],
+ "null": {
+  "groups": 0,
+  "n_pass": 0,
+  "expected": {
+   "expected_chance_groups": {
+    "2": 0.0,
+    "3": 0.0
+   },
+   "shift_test": null,
+   "drift_pair_survival": null,
+   "expected_after_drift": {
+    "2": null,
+    "3": null
+   }
+  },
+  "counts": {
+   "on_hits": 10,
+   "topo_vetoed": 10,
+   "star_off_vetoed": 0,
+   "outside_coverage": 0,
+   "survivors": 0,
+   "chance_veto_per_on_hit": 0.0023333333333333335
+  }
+ },
+ "n_star": 20,
+ "n_topo": 10,
+ "n_ononly": 10,
+ "levels": {
+  "10": {
+   "recovered_all": 0,
+   "recovered_any": 1,
+   "of": 20,
+   "found_per_on_scan": 2,
+   "of_on": 60,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 22,
+    "topo_vetoed": 14,
+    "star_off_vetoed": 0,
+    "outside_coverage": 2,
+    "survivors": 6,
+    "chance_veto_per_on_hit": 0.003833333333333333
+   },
+   "expected": {
+    "2": 8.513402999134218e-05,
+    "3": 0.0
+   }
+  },
+  "12": {
+   "recovered_all": 1,
+   "recovered_any": 3,
+   "of": 20,
+   "found_per_on_scan": 13,
+   "of_on": 60,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 55,
+    "topo_vetoed": 22,
+    "star_off_vetoed": 0,
+    "outside_coverage": 3,
+    "survivors": 30,
+    "chance_veto_per_on_hit": 0.005666666666666667
+   },
+   "expected": {
+    "2": 0.0031817155433764236,
+    "3": 1.675158108824182e-07
+   }
+  },
+  "15": {
+   "recovered_all": 10,
+   "recovered_any": 17,
+   "of": 20,
+   "found_per_on_scan": 47,
+   "of_on": 60,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 116,
+    "topo_vetoed": 38,
+    "star_off_vetoed": 0,
+    "outside_coverage": 2,
+    "survivors": 76,
+    "chance_veto_per_on_hit": 0.007333333333333333
+   },
+   "expected": {
+    "2": 0.020142215345696952,
+    "3": 2.604109423717592e-06
+   }
+  },
+  "20": {
+   "recovered_all": 18,
+   "recovered_any": 19,
+   "of": 20,
+   "found_per_on_scan": 57,
+   "of_on": 60,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 127,
+    "topo_vetoed": 40,
+    "star_off_vetoed": 0,
+    "outside_coverage": 2,
+    "survivors": 85,
+    "chance_veto_per_on_hit": 0.007666666666666666
+   },
+   "expected": {
+    "2": 0.025600191834205477,
+    "3": 3.837634940215398e-06
+   }
+  },
+  "30": {
+   "recovered_all": 20,
+   "recovered_any": 20,
+   "of": 20,
+   "found_per_on_scan": 60,
+   "of_on": 60,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 130,
+    "topo_vetoed": 40,
+    "star_off_vetoed": 0,
+    "outside_coverage": 2,
+    "survivors": 88,
+    "chance_veto_per_on_hit": 0.007666666666666666
+   },
+   "expected": {
+    "2": 0.027462063881425212,
+    "3": 4.269115059154961e-06
+   }
+  }
+ }
+}
