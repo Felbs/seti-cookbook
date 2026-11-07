@@ -5,6 +5,10 @@
 > been repeated on a second machine, and the plants were not blind. See [EVIDENCE.md](EVIDENCE.md).
 > Plants were added **after channelisation** (setigen, Doppler-smeared), not
 > into voltages as UCLA did.
+> **Slicing (2026-11-07):** every number here used 2^20-channel slices that are not aligned
+> with the 1,033,216-channel coarse channels (KNOWN_ISSUES #8). `etap.py` now cuts true
+> coarse channels by default; `--nfine 1048576` (h5) or `--whole-slice` (npz) reproduces
+> these results. The aligned re-run was not done.
 
 **Headline.** At the UCLA strength (turboSETI should report SNR ~20), our
 R9 turboSETI search (max_drift 4, min_drift 0, snr 10) recovers

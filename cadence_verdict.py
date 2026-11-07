@@ -20,6 +20,11 @@ passes it. This tool takes the surviving events and, for each, asks:
                fails the cadence. NOT-RECOVERED, INCOMPLETE and UNTESTED mean the
                forced check could NOT test the event: they are printed as
                information and never count as an explanation.
+  6. broadband - if the events CSV has a `fastsearch_broadband` column
+               (fastsearch_cadence.py / fastsearch.py flag-events), an event in a
+               BROADBAND coarse channel gets an (info) note: there only the strongest
+               hits were kept, so "no hit in an OFF" is weaker evidence. Never an
+               explanation by itself.
 Anything with no explanation is reported as rung 2 ("in every ON, not in OFF,
 not yet explained") - never as a detection.
 
@@ -141,6 +146,10 @@ def main(path, forced=None, rfi_db_path=None):
             if why:
                 reasons.append(why)
         notes = []
+        if "fastsearch_broadband" in g.columns and (g["fastsearch_broadband"].fillna(0).astype(int) > 0).any():
+            cc = sorted({int(c) for c in g.loc[g["fastsearch_broadband"].fillna(0).astype(int) > 0, "CoarseChanNum"]})
+            notes.append(f"fastsearch: coarse channel {cc} BROADBAND - only the strongest hits were kept there, "
+                         f"so an OFF without a hit is weak evidence (check --forced)")
         if fz is not None:
             fr = fz[fz["row"].isin(g["_row"])]
             if len(fr) == 0:

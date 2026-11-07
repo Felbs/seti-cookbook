@@ -24,8 +24,9 @@ data's own channel order; each backend says WHEN its ch is taken, t_ref_frac
 x tsamp after the start: turboSETI 0.5 (middle of the first spectrum, fitted
 slope 0.495 on 174 recovered GJ699 plants), reference 0, callable measured):
   turboseti  - turboSETI 2.3.2 with the R9 settings (max_drift 4, min_drift 0,
-               snr 10, n_coarse_chan 1) on a 2^20-channel HDF5 slice (NOT an
-               aligned PFB coarse channel: see read_coarse).
+               snr 10, n_coarse_chan 1) on one coarse channel (true PFB
+               boundaries by default since 2026-11-07; the published
+               ETAP_RESULT.md numbers used 2^20-channel slices: see read_coarse).
   reference  - a small brute-force de-Doppler in numpy (this file): shift and
                sum every drift on a grid, optional box sum over the per-spectrum
                smear, one hit per suppression window. Lets the selftest run
@@ -535,17 +536,28 @@ def band_fractions(lo_mhz, hi_mhz, exclude=(GBT_NOTCH,)):
 
 
 # ------------------------------------------------------------------ data access
-def meta_from_npz(path):
+def meta_from_npz(path, whole_slice=False):
+    """npz slice -> (data, meta). By default only the part inside ONE true coarse
+    channel is kept, DC spike repaired (coarse_align.py; the hi_starframe slices
+    straddle two coarse channels, KNOWN_ISSUES #8); whole_slice=True keeps it all."""
     import recovery
     data, m = recovery.load(path)
+    if not whole_slice:
+        import coarse_align
+        nf = data.shape[1]
+        data, info = coarse_align.coarse_segment(data, int(m.get("ch0", 0)), float(m["foff"]))
+        m["fch1"] = float(m["fch1"]) + float(m["foff"]) * info["lo"]
+        print(coarse_align.describe(info, nf))
     meta = dict(fch1_mhz=float(m["fch1"]), foff_hz=float(m["foff"]) * 1e6, tsamp=float(m["tsamp"]),
                 tstart=float(m["tstart"]), ra_h=float(m["ra_h"]), dec_deg=float(m["dec_deg"]),
                 nt=data.shape[0], nchan=data.shape[1], source=Path(path).name)
     return data, meta
 
 
-def read_coarse(h5path, k, nfine=1048576):
+def read_coarse(h5path, k, nfine=None):
     """Slice k (0-based) of nfine channels from a full BL fine-res HDF5.
+    nfine=None (default since 2026-11-07) = one TRUE coarse channel, width from the
+    header by blimpy's rule (coarse_align.nfine_per_coarse).
 
     NOTE: the GJ699 2016 spliced files have 2.8355 Hz channels and 264,503,296
     of them (1126.5-1876.5 MHz), i.e. 256 PFB coarse channels of 1,033,216
@@ -553,12 +565,15 @@ def read_coarse(h5path, k, nfine=1048576):
     ETAP_RESULT.md, and for the Mac's HI npz) therefore gives 252.25 slices of
     2.973 MHz that are NOT aligned with the coarse channels: each one holds a
     coarse-channel edge roll-off (to ~0.56 of the median level in the HI
-    slice). Pass --nfine 1033216 to cut true coarse channels."""
+    slice). Pass --nfine 1048576 to reproduce those slices."""
     import h5py
     import hdf5plugin  # noqa: F401
     with h5py.File(h5path, "r") as f:
         ds = f["data"]
         a = dict(ds.attrs)
+        if nfine is None:
+            import coarse_align
+            nfine = coarse_align.nfine_per_coarse(float(a["foff"]), int(a["nchans"]), int(a.get("telescope_id", 6)))
         data = ds[:, 0, k * nfine:(k + 1) * nfine].astype(np.float32)
     meta = dict(fch1_mhz=float(a["fch1"]) + float(a["foff"]) * k * nfine, foff_hz=float(a["foff"]) * 1e6,
                 tsamp=float(a["tsamp"]), tstart=float(a["tstart"]), ra_h=float(a["src_raj"]),
@@ -852,9 +867,13 @@ def main():
         p.add_argument("path")
         if nm == "h5":
             p.add_argument("--coarse", required=True, help="comma list of slice indices")
-            p.add_argument("--nfine", type=int, default=1048576,
-                           help="channels per slice (1033216 = one true PFB coarse channel in the "
-                                "2016 GJ699 files; default 2^20 matches the published results)")
+            p.add_argument("--nfine", type=int, default=None,
+                           help="channels per slice (default: one true PFB coarse channel from the header, "
+                                "1033216 in the 2016 GJ699 files; 1048576 reproduces the published results)")
+        else:
+            p.add_argument("--whole-slice", action="store_true",
+                           help="use the whole npz slice even where it straddles two coarse channels "
+                                "(the published results)")
         p.add_argument("--backend", default="turboseti", choices=["turboseti", "reference", "reference-1ch"])
         p.add_argument("--max-drift", type=float, default=4.0)
         p.add_argument("--snr", type=float, default=10.0)
@@ -886,7 +905,7 @@ def main():
         return cmd_summary(a.paths, a.json, (lo, hi), a.n_stars, a.cl)
     a.seed_list = [int(s) for s in a.seeds.split(",")]
     if a.cmd == "run":
-        return run_slices([meta_from_npz(a.path)], a)
+        return run_slices([meta_from_npz(a.path, a.whole_slice)], a)
     ks = [int(k) for k in a.coarse.split(",")]
     return run_slices((read_coarse(a.path, k, a.nfine) for k in ks), a)
 

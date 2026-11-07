@@ -13,6 +13,13 @@ data's own lines, and plants are kept away from them.
 
 The default settings are the GJ699 full-cadence search (R9, GJ699_CADENCE_RESULT.md):
 max_drift 4, min_drift 0, snr 10.
+
+Only the part of the slice inside ONE true coarse channel is searched
+(coarse_align.py; 1,033,216 fine channels per coarse channel in the 2016 GJ699
+files), with its DC spike repaired. The hi_starframe slices of 2^20 channels
+straddle two coarse channels (KNOWN_ISSUES #8); --whole-slice restores the old
+behaviour (turboSETI on the whole straddling slice), which the first published
+numbers used.
 """
 import argparse
 import json
@@ -94,6 +101,8 @@ def main():
     ap.add_argument("--drifts", help="comma list of Hz/s (default: the standard grid)")
     ap.add_argument("--snrs", help="comma list of TRUE SNR (default: the standard grid)")
     ap.add_argument("--json")
+    ap.add_argument("--whole-slice", action="store_true",
+                    help="search the whole npz slice even if it straddles two coarse channels (old behaviour)")
     a = ap.parse_args()
     global DRIFTS, SNRS
     if a.drifts:
@@ -102,6 +111,13 @@ def main():
         SNRS = [float(v) for v in a.snrs.split(",")]
 
     data, m = load(a.npz)
+    seg_info = None
+    if not a.whole_slice:
+        import coarse_align
+        nf_slice = data.shape[1]
+        data, seg_info = coarse_align.coarse_segment(data, int(m.get("ch0", 0)), float(m["foff"]))
+        m["fch1"] = float(m["fch1"]) + float(m["foff"]) * seg_info["lo"]
+        print(coarse_align.describe(seg_info, nf_slice))
     nt, nc = data.shape
     foff_hz, ts = float(m["foff"]) * 1e6, float(m["tsamp"])
     T = (nt - 1) * ts
@@ -122,7 +138,10 @@ def main():
         # 2. plant the grid
         cells = [(d, s) for d in DRIFTS for s in SNRS]
         n = len(cells) * a.per_cell
-        starts = layout(nc, n, [h["ch"] for h in own], guard=2 * radius + 50, seed=a.seed)
+        avoid = [h["ch"] for h in own]
+        if seg_info and seg_info["dc"] is not None:
+            avoid.append(seg_info["dc"])          # the real DC spike (repaired, but keep plants off it)
+        starts = layout(nc, n, avoid, guard=2 * radius + 50, seed=a.seed)
         plants = [dict(ch=float(starts[i]), drift=cells[i % len(cells)][0], snr=cells[i % len(cells)][1])
                   for i in range(n)]
         d = data.copy()
@@ -163,7 +182,8 @@ def main():
         if a.json:
             Path(a.json).write_text(json.dumps(dict(file=Path(a.npz).name, max_drift=a.max_drift,
                                                     snr=a.snr, seed=a.seed, per_cell=a.per_cell,
-                                                    null_hits=len(own), noise_ratio=k, table=table), indent=1))
+                                                    null_hits=len(own), noise_ratio=k, table=table,
+                                                    nchan=nc, coarse_segment=seg_info), indent=1))
     finally:
         shutil.rmtree(out, ignore_errors=True)
 

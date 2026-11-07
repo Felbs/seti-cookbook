@@ -1,0 +1,47 @@
+{
+ "file": "spliced_blc02030405_2bit_guppi_57457_48334_GJ699_OFF_0004.gpuspec.0002.h5",
+ "nt": 277,
+ "tsamp": 1.058013184,
+ "T_s": 293.069651968,
+ "nchan_searched": 261888,
+ "n_periods": 502,
+ "period_range_s": [
+  10.0,
+  69.89276831365324
+ ],
+ "trials_per_channel": 24694,
+ "trials_total": 6467062272,
+ "channels_with_max_snr_ge": {
+  "5": 12181,
+  "6": 6768,
+  "7": 5018,
+  "8": 3926,
+  "10": 2713
+ },
+ "backend": "numpy",
+ "common_mode": true,
+ "shuffled": false,
+ "gaussian_expected_trials_ge": {
+  "6": 6.380323737244603,
+  "8": 4.023133942547222e-06
+ },
+ "n_candidates": 20321,
+ "n_fundamental_groups": 10682,
+ "n_groups_ge_on_cutoff": 4107,
+ "wall_s": 334.0,
+ "prereg": {
+  "date": "2026-11-07",
+  "product": "GBT mid-resolution .0002 (2016: 1.058 s x 2.861 kHz, 277 spectra per scan)",
+  "period_min_s": 10.0,
+  "period_max_s": 70.0,
+  "fpmin": 3,
+  "bins_min": 9,
+  "bins_max": 10,
+  "ducy_max": 0.5,
+  "oversample": 0.5,
+  "on_cutoff": 8.0,
+  "off_cutoff": 6.0,
+  "cand_floor": 6.0,
+  "common_mode": true
+ }
+}
