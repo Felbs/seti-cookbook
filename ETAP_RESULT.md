@@ -162,13 +162,8 @@ stars, and only with a search that keeps fast drifts.
   (the file holds 256 true PFB coarse channels of 1,033,216 fine channels;
   our slices are not aligned with them): 1419-1422 MHz, plus 15 slices between
   1621 and 1876 MHz. `etap.py h5 --nfine 1033216` cuts aligned coarse channels
-  for future runs; that was not run. The PC run planned 35 channels
-  across the band, but **it was stopped after 15**. The PC's D-layer experiment
-  had missed its 23:01, 23:11 and 23:31 UTC slots. Its last log line was
-  22:41:30Z, with overflows=0, and its process was busy on the CPU without
-  logging. The D-layer process kept stalling after our jobs stopped (23:16Z),
-  while other users' compile jobs held the load at 13-18. We did not touch it,
-  and someone needs to look at it.
+  for future runs; that was not run. A planned 35-channel run across the band
+  was stopped after 15 to free a shared machine.
 - No repeat run on a second machine, so this is not E3. The planned PC re-run of
   the Mac's slice with the same seed did not happen.
 - One scan only. eta_P here is for a single hit. Needing the signal in all three

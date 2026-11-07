@@ -127,7 +127,7 @@ Threshold 7, 3 workers, Nice 19, CPUQuota 300 %, PC otherwise lightly loaded.
   (1.5 worker-minutes of reading). turboSETI's log for the same file: 65.6 min, but it
   ran as one process alongside three other turboSETI runs.
 - **Like-for-like CPU** (same 8 coarse channels 100–107, one process each, CPUQuota 100 %,
-  PC load ~2–3 from other users): **fastsearch 51.8 s (numba) / 74.4 s (pure numpy),
+  PC load ~2–3 from other jobs): **fastsearch 51.8 s (numba) / 74.4 s (pure numpy),
   turboSETI 111.1 s.** That is 2.1× / 1.5× less CPU. Peak memory 715 / 620 MB vs
   1,778 MB. On the Mac (review measurement, one 749,568-channel array): 5.4 s numba,
   7.9 s numpy, turboSETI 13.1 s.
