@@ -88,6 +88,8 @@ def print_ftx(res, n_stars=1, cl=0.95):
             rng = f"  (eta_P CI -> {f_lo:.3g} .. {f_hi:.3g})"
         verdict = f"f_TX < {f:.3g}" if f < 1 else f"bound {f:.3g} >= 1: NO constraint"
         print(f"  {lab:12s} eta_P {e:.4f}  D {d:.3f}  ->  {verdict}{rng}")
+        if lab == "all band" and res.get("eta_all_note"):
+            print(f"               note: {res['eta_all_note']}")
     for n in (100, 1000, 10000):
         if n > n_stars:
             print(f"  for scale: the same eta_P, D over {n:>5d} stars -> f_TX < "

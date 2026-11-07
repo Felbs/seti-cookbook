@@ -19,10 +19,13 @@ What is different from UCLA, and labelled so everywhere:
     to ~20) AND in TRUE radiometer SNR (inject.radiometer_noise), which is what
     reach.py and the radiometer equation mean by SNR (EVIDENCE.md rule 4).
 
-Search backends (plug-ins, all return hits as dict(ch, drift, snr) with ch =
-the hit's channel at the start of the scan, in the data's own channel order):
-  turboseti  - turboSETI 2.3.2 exactly as R9 ran it (max_drift 4, min_drift 0,
-               snr 10, n_coarse_chan 1) on a one-coarse-channel HDF5 slice.
+Search backends (plug-ins, all return hits as dict(ch, drift, snr) in the
+data's own channel order; each backend says WHEN its ch is taken, t_ref_frac
+x tsamp after the start: turboSETI 0.5 (middle of the first spectrum, fitted
+slope 0.495 on 174 recovered GJ699 plants), reference 0, callable measured):
+  turboseti  - turboSETI 2.3.2 with the R9 settings (max_drift 4, min_drift 0,
+               snr 10, n_coarse_chan 1) on a 2^20-channel HDF5 slice (NOT an
+               aligned PFB coarse channel: see read_coarse).
   reference  - a small brute-force de-Doppler in numpy (this file): shift and
                sum every drift on a grid, optional box sum over the per-spectrum
                smear, one hit per suppression window. Lets the selftest run
@@ -31,8 +34,9 @@ the hit's channel at the start of the scan, in the data's own channel order):
                use CallableBackend(fn, ...).
 
 Matching, reported both ways:
-  UCLA       - one-to-one; a hit is credited if its start frequency is within
-               +-6 Hz and its drift within +-0.05 Hz/s of the plant's.
+  UCLA       - one-to-one; a hit is credited if its frequency is within +-6 Hz
+               of the plant's at the same time (t_ref) and its drift within
+               +-0.05 Hz/s of the plant's (Margot et al. 2023, Table 2 note).
   path       - inject.match (one-to-one along the whole track) and, stricter,
                inject.explain_misses' "found" (path AND drift_ok).
 
@@ -64,7 +68,10 @@ UCLA_TOL_HZ = 6.0            # start-frequency tolerance
 UCLA_TOL_DRIFT = 0.05        # Hz/s
 GBT_NOTCH = (1200.0, 1340.0)  # MHz, the L-band receiver's radar notch
 DRIFT_SUBSETS = (8.86, 4.0, 2.0)
-UCLA_BL_LIKE = 0.057         # quoted BL-like control, +-8.86 Hz/s (not re-derived here)
+# Margot et al. 2023, AJ 166, 206 (arXiv 2308.02712), Table 2: "BL-like process",
+# 570 of 10,000 VOLTAGE injections (2^20 FFT, 2.98 Hz; 51 spectra summed, 17.11 s;
+# turboSETI -M 8.88 -s 10; strength S/N ~20 "upon recovery"). Quoted, not recomputed.
+UCLA_BL_LIKE = 0.057
 
 
 # ------------------------------------------------------------------ statistics
@@ -87,6 +94,12 @@ class Backend:
     name = "backend"
     max_drift = 4.0          # Hz/s the search is asked for
     snr = 10.0               # its threshold, in its own units
+    # A hit's channel is the track's position at t = t_ref_frac * tsamp after the
+    # start of the first spectrum (plants are defined at t = 0). turboSETI reports
+    # the track at the MIDDLE of the first spectrum (0.5; measured slope 0.99 on
+    # 177 recovered GJ699 plants), so a 8.86 Hz/s plant found exactly would sit
+    # 80 Hz from its t=0 start frequency and fail a naive +-6 Hz test.
+    t_ref_frac = 0.0
 
     def search(self, data, meta):
         raise NotImplementedError
@@ -105,6 +118,7 @@ class Backend:
 class TurboSETIBackend(Backend):
     """turboSETI 2.3.2 with the R9 settings, on a one-coarse-channel slice."""
     name = "turboseti"
+    t_ref_frac = 0.5
 
     def __init__(self, max_drift=4.0, snr=10.0, min_drift=0.0, workdir=None):
         self.max_drift, self.snr, self.min_drift = max_drift, snr, min_drift
@@ -141,7 +155,7 @@ class TurboSETIBackend(Backend):
 
 
 def dedoppler_brute(data, foff_hz, tsamp, max_drift, snr, drift_step=None, boxcar=True,
-                    radius=None):
+                    radius=None, skip_zero=False, report_frac=0.0):
     """Reference de-Doppler search, numpy only.
 
     Bandpass out (each channel over the 65-channel running median of the mean
@@ -151,7 +165,9 @@ def dedoppler_brute(data, foff_hz, tsamp, max_drift, snr, drift_step=None, boxca
     spectrum, so a fast tone's smeared power is collected (turboSETI sums one
     channel). SNR = (sum - median) / robust std of that drift's row, i.e. TRUE
     radiometer units for a zero-drift channel-centred tone. One hit per
-    +-radius channels (default turboSETI's own window). Returns hits."""
+    +-radius channels (default turboSETI's own window). Returns hits, ch at
+    t = report_frac * tsamp (0 = start of the track). skip_zero drops the
+    drift-0 row, as turboSETI does (selftest control for calibrate_scale)."""
     from scipy.ndimage import median_filter, maximum_filter1d
     nt, nc = data.shape
     x = np.asarray(data, dtype=np.float64)
@@ -164,6 +180,8 @@ def dedoppler_brute(data, foff_hz, tsamp, max_drift, snr, drift_step=None, boxca
     step = drift_step or abs(foff_hz) / ((nt - 1) * tsamp)
     nd = int(math.floor(max_drift / step))
     drifts = np.arange(-nd, nd + 1) * step
+    if skip_zero:
+        drifts = drifts[drifts != 0]
     best = np.full(nc, -np.inf)
     bestk = np.zeros(nc, dtype=np.int32)
     sub = slice(None, None, 7)
@@ -193,13 +211,16 @@ def dedoppler_brute(data, foff_hz, tsamp, max_drift, snr, drift_step=None, boxca
         radius = 2 * int(math.ceil(max_drift / (abs(foff_hz) / T)))
     peak = (best >= snr) & (best >= maximum_filter1d(best, size=2 * radius + 1, mode="constant",
                                                      cval=-np.inf))
-    return [dict(ch=float(j), drift=float(drifts[bestk[j]]), snr=float(best[j]))
+    return [dict(ch=float(j) + float(drifts[bestk[j]]) * report_frac * tsamp / foff_hz,
+                 drift=float(drifts[bestk[j]]), snr=float(best[j]))
             for j in np.nonzero(peak)[0]]
 
 
 class ReferenceBackend(Backend):
-    """Brute-force numpy de-Doppler (dedoppler_brute)."""
+    """Brute-force numpy de-Doppler (dedoppler_brute). Its hit channel is the
+    track at t = 0 (spectrum i is sampled at r*(i+0.5) channels from it)."""
     name = "reference"
+    t_ref_frac = 0.0
 
     def __init__(self, max_drift=4.0, snr=10.0, boxcar=True, drift_step=None):
         self.max_drift, self.snr, self.boxcar, self.drift_step = max_drift, snr, boxcar, drift_step
@@ -212,11 +233,18 @@ class ReferenceBackend(Backend):
 
 class CallableBackend(Backend):
     """Wrap any search function fn(data, meta) -> [dict(ch, drift, snr), ...].
-    snr_scale: TRUE SNR per unit of fn's SNR; None = measure it (calibrate())."""
+    snr_scale: TRUE SNR per unit of fn's SNR; None = measure it (calibrate_scale).
+    t_ref_frac: when in the first spectrum fn's hit channel is taken (0 = start,
+    0.5 = middle as turboSETI); None = measure it (calibrate_t_ref).
+    drift_step: fn's drift grid in Hz/s, so the scale is measured with tones ON
+    it; None = the natural step (one channel over the scan)."""
 
-    def __init__(self, fn, name="callable", max_drift=4.0, snr=10.0, snr_scale=None):
+    def __init__(self, fn, name="callable", max_drift=4.0, snr=10.0, snr_scale=None,
+                 t_ref_frac=None, drift_step=None):
         self.fn, self.name, self.max_drift, self.snr = fn, name, max_drift, snr
+        self.drift_step = drift_step
         self._scale = snr_scale
+        self._t_ref = t_ref_frac
 
     def search(self, data, meta):
         return list(self.fn(data, meta))
@@ -226,18 +254,78 @@ class CallableBackend(Backend):
             self._scale = calibrate_scale(self, data, meta)
         return self._scale
 
+    def prepare(self, data, meta):
+        if self._t_ref is None:
+            self._t_ref = calibrate_t_ref(self, data, meta)
+        return self
 
-def calibrate_scale(backend, data, meta, n=12, true_snr=100.0):
+    @property
+    def t_ref_frac(self):
+        return 0.0 if self._t_ref is None else self._t_ref
+
+
+def drift_step_hz_s(meta):
+    """The natural de-Doppler drift step: one channel over the scan (turboSETI's
+    resolution, 0.0105 Hz/s for GJ699's 16 x 17.99 s at 2.84 Hz)."""
+    return abs(meta["foff_hz"]) / ((meta["nt"] - 1) * meta["tsamp"])
+
+
+def calibrate_scale(backend, data, meta, n=12, true_snr=100.0, steps=(-2, -1, 1, 2), drift_step=None):
     """Measure TRUE SNR per unit of the backend's SNR: plant n channel-centred
-    zero-drift tones at true_snr into a copy and take the median ratio."""
+    tones at true_snr into a copy and take the median ratio.
+
+    The tones drift by +-1 and +-2 natural drift steps, NOT 0: turboSETI never
+    tests drift 0, and an exact zero-drift tone comes back at the neighbouring
+    drift with about half its SNR (measured scale 8.3 vs the true 4.26 on the
+    GJ699 HI channel), which would plant every signal ~2x too bright.
+    The tones must sit ON the search's drift grid: drift_step (or the
+    backend's own drift_step attribute) if given, else the natural step. Off
+    the grid they lose SNR too (selftest: a 0.02 Hz/s grid fed 0.0105 Hz/s
+    tones measured 1.54 instead of 1.0)."""
     nc = data.shape[1]
     chs = np.linspace(0.1 * nc, 0.9 * nc, n).round()
-    plants = [dict(ch=float(c), drift=0.0, snr=true_snr) for c in chs]
+    st = drift_step or getattr(backend, "drift_step", None) or drift_step_hz_s(meta)
+    plants = [dict(ch=float(c), drift=float(steps[i % len(steps)] * st), snr=true_snr)
+              for i, c in enumerate(chs)]
     d = data.copy()
     inject.plant(d, meta["foff_hz"], meta["tsamp"], plants)
     hits = backend.search(d, meta)
-    r = [true_snr / h["snr"] for p in plants for h in hits if abs(h["ch"] - p["ch"]) <= 2]
+    m = inject.match(plants, hits, meta["foff_hz"], meta["tsamp"], meta["nt"])
+    r = [true_snr / hits[j]["snr"] for j in m if j is not None]
     return float(np.median(r)) if r else float("nan")
+
+
+def calibrate_t_ref(backend, data, meta, n=12, true_snr=1000.0, drifts=(-1.0, -0.5, 0.5, 1.0)):
+    """Measure WHEN in the first spectrum the backend's hit channel is taken:
+    plant very bright tones at +-0.5 and +-1 Hz/s, path-match them, and fit
+    (hit ch - plant ch) * foff = t_ref * drift through the origin. Returns
+    t_ref / tsamp rounded to the nearest 0.5 (0 = start of track, 0.5 = middle
+    of the first spectrum): hits are pinned only to ~1 channel, so the raw fit
+    is rough. Measured: the reference backend 0.000, a mid-spectrum reporter
+    0.500 (selftest); turboSETI through this generic path 0.32 on the GJ699 HI
+    channel (bright tones take neighbouring tree paths), rounding to the 0.5
+    that 174 recovered GJ699 plants fit (slope 0.495). The raw fit is kept in
+    backend.t_ref_raw; a warning is printed if it is > 0.15 from the rounded
+    value. Falls back to 0.5 with a warning if fewer than 3 tones are found."""
+    nc = data.shape[1]
+    chs = np.linspace(0.1 * nc, 0.9 * nc, n).round()
+    plants = [dict(ch=float(c), drift=float(drifts[i % len(drifts)]), snr=true_snr)
+              for i, c in enumerate(chs)]
+    d = data.copy()
+    inject.plant(d, meta["foff_hz"], meta["tsamp"], plants)
+    hits = backend.search(d, meta)
+    m = inject.match(plants, hits, meta["foff_hz"], meta["tsamp"], meta["nt"])
+    x = np.array([p["drift"] * meta["tsamp"] for p, j in zip(plants, m) if j is not None])
+    y = np.array([(hits[j]["ch"] - p["ch"]) * meta["foff_hz"] for p, j in zip(plants, m) if j is not None])
+    if len(x) < 3:
+        print(f"warning: {backend.name}: t_ref calibration found {len(x)} tones; assuming 0.5 (turboSETI)")
+        return 0.5
+    raw = float(np.dot(x, y) / np.dot(x, x))
+    backend.t_ref_raw = raw
+    out = float(np.round(raw / 0.5) * 0.5)
+    if abs(raw - out) > 0.15:
+        print(f"warning: {backend.name}: t_ref fit {raw:.2f} x tsamp is rough; using {out:g}")
+    return out
 
 
 # ------------------------------------------------------------------ the protocol
@@ -294,14 +382,17 @@ def design_plants(meta, per_mhz, drift_max, gap_ch, rng, exclude=(GBT_NOTCH,), e
     return plants, n_want
 
 
-def match_ucla(plants, hits, foff_hz, tol_hz=UCLA_TOL_HZ, tol_drift=UCLA_TOL_DRIFT):
-    """One-to-one: start frequency within tol_hz AND drift within tol_drift."""
+def match_ucla(plants, hits, foff_hz, tol_hz=UCLA_TOL_HZ, tol_drift=UCLA_TOL_DRIFT, t_ref_s=0.0):
+    """One-to-one: start frequency within tol_hz AND drift within tol_drift.
+    The plant's frequency is taken at the time the search reports its hits at
+    (t_ref_s after the start: turboSETI tsamp/2), so the +-6 Hz test compares
+    like with like at every drift."""
     from scipy.optimize import linear_sum_assignment
     out = [None] * len(plants)
     if not plants or not hits:
         return out
-    pc = np.array([p["ch"] for p in plants])
     pd = np.array([p["drift"] for p in plants])
+    pc = np.array([p["ch"] for p in plants]) + pd * t_ref_s / foff_hz
     hc = np.array([h["ch"] for h in hits])
     hd = np.array([h["drift"] for h in hits])
     dfz = np.abs(pc[:, None] - hc[None, :]) * abs(foff_hz)
@@ -330,7 +421,10 @@ def trial(data, meta, backend, seed, per_mhz=75.0, target_snr=20.0, drift_max=UC
     rng = np.random.default_rng(seed)
     nt, nc = data.shape
     foff_hz, ts = meta["foff_hz"], meta["tsamp"]
+    if hasattr(backend, "prepare"):
+        backend.prepare(data, meta)
     scale = backend.snr_scale(data, meta)
+    t_ref_s = backend.t_ref_frac * ts
     true_snr = target_snr * scale
     gap = backend.suppression_ch(meta) + 8
     plants, n_want = design_plants(meta, per_mhz, drift_max, gap, rng, exclude)
@@ -346,7 +440,7 @@ def trial(data, meta, backend, seed, per_mhz=75.0, target_snr=20.0, drift_max=UC
     hits = backend.search(d, meta)
     t_search = time.time() - t0
     del d
-    m_u = match_ucla(plants, hits, foff_hz)
+    m_u = match_ucla(plants, hits, foff_hz, t_ref_s=t_ref_s)
     m_p = inject.match(plants, hits, foff_hz, ts, nt)
     why = inject.explain_misses(plants, hits, m_p, foff_hz, ts, nt, backend.max_drift)
     own = null_hits or []
@@ -363,9 +457,11 @@ def trial(data, meta, backend, seed, per_mhz=75.0, target_snr=20.0, drift_max=UC
             ucla=hu is not None, path=hp is not None, path_drift=why[i]["status"] == "found",
             status=why[i]["status"],
             hit_snr=None if hp is None else round(hp["snr"], 2),
-            hit_dhz=None if hp is None else round((hp["ch"] - p["ch"]) * foff_hz, 2),
+            # offset from the plant's position at the search's own reference time
+            hit_dhz=None if hp is None else round((hp["ch"] - p["ch"]) * foff_hz - p["drift"] * t_ref_s, 2),
             hit_ddrift=None if hp is None else round(hp["drift"] - p["drift"], 4)))
     info = dict(n_want=n_want, n=len(plants), hits=len(hits), scale=scale, true_snr=true_snr,
+                t_ref_frac=backend.t_ref_frac,
                 t_plant_s=round(t_plant, 1), t_search_s=round(t_search, 1),
                 max_abs_hit_drift=max([abs(h["drift"]) for h in hits], default=0.0))
     if verbose:
@@ -449,7 +545,15 @@ def meta_from_npz(path):
 
 
 def read_coarse(h5path, k, nfine=1048576):
-    """Coarse channel k (0-based, nfine channels) of a full BL fine-res HDF5."""
+    """Slice k (0-based) of nfine channels from a full BL fine-res HDF5.
+
+    NOTE: the GJ699 2016 spliced files have 2.8355 Hz channels and 264,503,296
+    of them (1126.5-1876.5 MHz), i.e. 256 PFB coarse channels of 1,033,216
+    fine channels. The default nfine = 2^20 (used for every result in
+    ETAP_RESULT.md, and for the Mac's HI npz) therefore gives 252.25 slices of
+    2.973 MHz that are NOT aligned with the coarse channels: each one holds a
+    coarse-channel edge roll-off (to ~0.56 of the median level in the HI
+    slice). Pass --nfine 1033216 to cut true coarse channels."""
     import h5py
     import hdf5plugin  # noqa: F401
     with h5py.File(h5path, "r") as f:
@@ -514,6 +618,8 @@ def protocol_dict(a, be):
     return dict(backend=be.name, max_drift=be.max_drift, snr=be.snr, per_mhz=a.per_mhz,
                 target_search_snr=a.target_snr, drift_max=a.drift_max,
                 tol_hz=UCLA_TOL_HZ, tol_drift=UCLA_TOL_DRIFT, notch_excluded=not a.no_notch,
+                t_ref_frac=be.t_ref_frac,
+                hit_dhz="hit minus plant frequency at t = t_ref_frac * tsamp (Hz)",
                 injection="post-channelisation (setigen, Doppler-smeared), NOT voltage")
 
 
@@ -532,22 +638,68 @@ def cmd_summary(paths, out_json=None, band=(1126.4, 1876.5), n_stars=1, cl=0.95)
     print(f"largest |drift| reported by the search: {max(i['max_abs_hit_drift'] for i in infos):.4f} Hz/s")
     s = summarize(recs)
     f_rfi = np.mean([r["rfi"] for r in recs])
-    print(f"plants inside RFI_BANDS: {f_rfi:.3f}")
     d_all, d_out = band_fractions(*band)
-    import reach
+    # the sample is mostly clean band; the searched band is mostly RFI_BANDS.
+    # Stratify: weight each stratum's eta_P by its share of the band.
     key = f"{UCLA_DRIFT:g}"
+    rr = [r for r in recs if r["rfi"] and abs(r["drift"]) <= UCLA_DRIFT]
+    k_rfi = sum(r["ucla"] for r in rr)
+    e_rfi = k_rfi / len(rr) if rr else float("nan")
+    w_rfi = (d_all - d_out) / d_all
+    e_out_ = s[f"{key}|outside_rfi"]["ucla"]["eta"]
+    e_strat = (1 - w_rfi) * e_out_ + w_rfi * e_rfi if rr else float("nan")
+    print(f"plants inside RFI_BANDS: {f_rfi:.3f} of the sample, but RFI_BANDS are {w_rfi:.3f} of the "
+          f"searched band; eta_P inside RFI {e_rfi:.4f} ({k_rfi}/{len(rr)}); "
+          f"band-weighted (stratified) eta_P {e_strat:.4f}")
+    import reach
     e_all = s[f"{key}|all"]["ucla"]["eta"]
     e_out = s[f"{key}|outside_rfi"]["ucla"]["eta"]
     res = dict(n_plants=len(recs), protocol=prot, summary=s, band_mhz=list(band), D_all=d_all,
                D_outside_rfi=d_out, eta_all=e_all, eta_outside_rfi=e_out,
                eta_all_ci=[s[f"{key}|all"]["ucla"]["lo"], s[f"{key}|all"]["ucla"]["hi"]],
-               eta_outside_rfi_ci=[s[f"{key}|outside_rfi"]["ucla"]["lo"], s[f"{key}|outside_rfi"]["ucla"]["hi"]])
+               eta_outside_rfi_ci=[s[f"{key}|outside_rfi"]["ucla"]["lo"], s[f"{key}|outside_rfi"]["ucla"]["hi"]],
+               rfi_sample_frac=float(f_rfi), rfi_band_frac=float(w_rfi), n_rfi=len(rr), eta_rfi=e_rfi,
+               eta_all_stratified=e_strat,
+               eta_all_note=(f"all-band eta_P measured on a sample only {f_rfi:.0%} inside RFI_BANDS, "
+                             f"which are {w_rfi:.0%} of the band (1525-1610 MHz never sampled); "
+                             f"band-weighted estimate {e_strat:.4f} from {len(rr)} RFI-band plants"))
     print(f"\nD (band {band[0]:g}-{band[1]:g} MHz minus the 1200-1340 notch) = {d_all:.3f}; "
           f"outside RFI_BANDS too = {d_out:.3f}")
     reach.print_ftx(res, n_stars=n_stars, cl=cl)
     if out_json:
         Path(out_json).write_text(json.dumps(res, indent=1))
         print(f"wrote {out_json}")
+    return 0
+
+
+def cmd_rescore(path, out_json, t_ref_frac=0.5):
+    """Re-apply the UCLA rule to a run made before the t_ref fix (hit_dhz then
+    measured from the plant's t=0 frequency), from the stored path-matched hit.
+    Approximate: a UCLA match to a hit that was NOT the path match cannot be
+    re-checked and keeps its old verdict (counted and printed)."""
+    z = json.loads(Path(path).read_text())
+    prot = z["protocol"]
+    if "t_ref_frac" in prot:
+        raise SystemExit(f"{path} already has t_ref_frac {prot['t_ref_frac']}; nothing to rescore")
+    ts = 17.986224128
+    changed = kept = 0
+    for r in z["records"]:
+        if r["hit_dhz"] is None:
+            kept += r["ucla"]
+            continue
+        dhz = r["hit_dhz"] - r["drift"] * t_ref_frac * ts
+        new = abs(dhz) <= UCLA_TOL_HZ and abs(r["hit_ddrift"]) <= UCLA_TOL_DRIFT
+        changed += new != r["ucla"]
+        r["ucla"], r["hit_dhz"] = bool(new), round(dhz, 2)
+    prot.update(t_ref_frac=t_ref_frac, hit_dhz="hit minus plant frequency at t = t_ref_frac * tsamp (Hz)",
+                rescored=f"from {Path(path).name}: UCLA rule re-applied to the path-matched hit "
+                         f"(tsamp {ts} s assumed)")
+    for i in z["infos"]:
+        i["t_ref_frac"] = t_ref_frac
+    z["summary"] = summarize(z["records"], quiet=True)
+    Path(out_json).write_text(json.dumps(z))
+    print(f"{path}: {len(z['records'])} records, UCLA verdict changed for {changed}; "
+          f"{kept} UCLA matches without a path match kept as they were -> {out_json}")
     return 0
 
 
@@ -596,9 +748,27 @@ def selftest():
     chk("reference backend SNR is TRUE radiometer SNR (scale 0.85-1.15)", 0.85 < sc < 1.15, f"{sc:.3f}")
     be_c = CallableBackend(lambda d, m: dedoppler_brute(d, m["foff_hz"], m["tsamp"], 2.2, 10.0,
                                                         drift_step=0.02),
-                           name="callable(reference)", max_drift=2.2)
+                           name="callable(reference)", max_drift=2.2, drift_step=0.02)
     sc_c = be_c.snr_scale(noise, meta)
     chk("generic callable backend calibrates itself the same way", abs(sc_c - sc) < 0.05, f"{sc_c:.3f}")
+    # a search that never tests drift 0 (like turboSETI) must still calibrate right;
+    # the old zero-drift calibration would have been fooled by it (control that bites)
+    nz = lambda d, m: dedoppler_brute(d, m["foff_hz"], m["tsamp"], 0.5, 10.0, skip_zero=True)
+    sc_nz = calibrate_scale(CallableBackend(nz, max_drift=0.5), noise, meta, n=8)
+    sc_ref0 = calibrate_scale(CallableBackend(lambda d, m: dedoppler_brute(d, m["foff_hz"], m["tsamp"],
+                                                                            0.5, 10.0), max_drift=0.5),
+                              noise, meta, n=8)
+    chk("calibration: search that skips drift 0 still within 15 % of its true scale",
+        abs(sc_nz / sc_ref0 - 1) < 0.15, f"{sc_nz:.3f} vs {sc_ref0:.3f}")
+    nc8 = noise.shape[1]
+    z0 = [dict(ch=float(c), drift=0.0, snr=100.0) for c in np.linspace(0.1 * nc8, 0.9 * nc8, 8).round()]
+    dz = noise.copy()
+    inject.plant(dz, foff, ts, z0)
+    hz = nz(dz, meta)
+    rz = [100.0 / h["snr"] for p in z0 for h in hz if abs(h["ch"] - p["ch"]) <= 2]
+    sc_old = float(np.median(rz)) if rz else float("nan")
+    chk("control: OLD zero-drift calibration WOULD be fooled by that search (>15 % off)",
+        not (abs(sc_old / sc_ref0 - 1) < 0.15), f"{sc_old:.3f}")
 
     hi_r, _ = trial(noise, meta, be, seed=1, per_mhz=100, target_snr=60, drift_max=2.0,
                     exclude=(), verbose=False)
@@ -608,6 +778,35 @@ def selftest():
                     exclude=(), verbose=False)
     eta_lo = np.mean([r["ucla"] for r in lo_r])
     chk("eta_P ~0 at search SNR 3", eta_lo <= 0.06, f"eta {eta_lo:.3f} of {len(lo_r)}")
+
+    # 4b. time reference of the hit channel: measured, and applied by the UCLA match
+    tr_ref = calibrate_t_ref(be, noise, meta)
+    mid = lambda d, m: dedoppler_brute(d, m["foff_hz"], m["tsamp"], 2.2, 10.0, drift_step=0.02,
+                                       report_frac=0.5)
+    be_mid = CallableBackend(mid, name="callable(mid-spectrum)", max_drift=2.2, snr_scale=sc)
+    tr_mid = be_mid.prepare(noise, meta).t_ref_frac
+    chk("t_ref calibration: reference = 0, mid-first-spectrum reporter = 0.5",
+        tr_ref == 0.0 and tr_mid == 0.5,
+        f"{tr_ref:.2f} (raw {be.t_ref_raw:.3f}), {tr_mid:.2f} (raw {be_mid.t_ref_raw:.3f})")
+    mid_r, _ = trial(noise, meta, be_mid, seed=1, per_mhz=100, target_snr=60, drift_max=2.0,
+                     exclude=(), verbose=False)
+    eta_mid = np.mean([r["ucla"] for r in mid_r])
+    chk("eta_P ~1 for a mid-spectrum reporter at SNR 60 (|drift| <= 2)", eta_mid >= 0.9,
+        f"eta {eta_mid:.3f} of {len(mid_r)}")
+    be_mid0 = CallableBackend(mid, name="callable(mid, t_ref wrongly 0)", max_drift=2.2, snr_scale=sc,
+                              t_ref_frac=0.0)
+    w_r, _ = trial(noise, meta, be_mid0, seed=1, per_mhz=100, target_snr=60, drift_max=2.0,
+                   exclude=(), verbose=False)
+    fast = [r for r in w_r if abs(r["drift"]) > 1.0]
+    chk("control: same search with t_ref wrongly 0 loses its |drift| > 1 plants",
+        fast and np.mean([r["ucla"] for r in fast]) < 0.2,
+        f"{np.mean([r['ucla'] for r in fast]) if fast else float('nan'):.3f} of {len(fast)}")
+    p5 = [dict(ch=20000.0, drift=5.0)]
+    h5 = [dict(ch=20000.0 + 5.0 * ts / 2 / foff, drift=5.0, snr=20)]   # 45 Hz from the t=0 start
+    chk("UCLA match: drift-5 hit reported at mid first spectrum is credited (t_ref tsamp/2)",
+        match_ucla(p5, h5, foff, t_ref_s=ts / 2)[0] == 0)
+    chk("UCLA match: same hit NOT credited when compared at t=0 (the old bug)",
+        match_ucla(p5, h5, foff, t_ref_s=0.0)[0] is None)
 
     # 5. matching controls: a hit with the opposite drift, or 10 Hz away, must NOT match
     plants = [dict(ch=1000.0, drift=1.0), dict(ch=5000.0, drift=-0.5), dict(ch=9000.0, drift=0.3)]
@@ -632,8 +831,12 @@ def selftest():
     chk("design: drifts span +-8.86 Hz/s", max(abs(p["drift"]) for p in pl) <= UCLA_DRIFT and
         max(abs(p["drift"]) for p in pl) > 8.0)
     pn, nwn = design_plants(dict(meta, fch1_mhz=1338.0, nchan=1048576), 75, 2.0, gap, np.random.default_rng(4))
-    chk("design: nothing planted inside the 1200-1340 MHz notch",
-        all(not (GBT_NOTCH[0] <= p["f_mhz"] <= GBT_NOTCH[1]) for p in pn) and nwn < 0.75 * 75 * 2.97)
+    chk("design: slice wholly inside the notch gets no plants", nwn == 0 and not pn)
+    ps, nws = design_plants(dict(meta, fch1_mhz=1341.5, nchan=1048576), 75, 2.0, gap,
+                            np.random.default_rng(5))
+    chk("design: slice straddling 1340 MHz plants only above it, ~75 x 1.5 MHz",
+        ps and all(p["f_mhz"] > GBT_NOTCH[1] for p in ps) and abs(nws - 112) <= 1 and len(ps) == nws,
+        f"{len(ps)}/{nws}, lowest {min(p['f_mhz'] for p in ps):.4f} MHz" if ps else "none")
 
     ok = all(c[1] for c in checks)
     print("selftest", "PASS" if ok else "FAIL", f"({sum(c[1] for c in checks)}/{len(checks)})")
@@ -648,7 +851,10 @@ def main():
         p = sub.add_parser(nm)
         p.add_argument("path")
         if nm == "h5":
-            p.add_argument("--coarse", required=True, help="comma list of coarse-channel indices")
+            p.add_argument("--coarse", required=True, help="comma list of slice indices")
+            p.add_argument("--nfine", type=int, default=1048576,
+                           help="channels per slice (1033216 = one true PFB coarse channel in the "
+                                "2016 GJ699 files; default 2^20 matches the published results)")
         p.add_argument("--backend", default="turboseti", choices=["turboseti", "reference", "reference-1ch"])
         p.add_argument("--max-drift", type=float, default=4.0)
         p.add_argument("--snr", type=float, default=10.0)
@@ -660,6 +866,10 @@ def main():
         p.add_argument("--fixed-seed", action="store_true",
                        help="use each seed as given in every slice (cross-machine reproduction)")
         p.add_argument("--json")
+    p = sub.add_parser("rescore", help="re-apply the UCLA rule (t_ref fix) to a pre-fix run JSON")
+    p.add_argument("path")
+    p.add_argument("--json", required=True)
+    p.add_argument("--t-ref-frac", type=float, default=0.5)
     p = sub.add_parser("summary")
     p.add_argument("paths", nargs="+")
     p.add_argument("--json")
@@ -669,6 +879,8 @@ def main():
     a = ap.parse_args()
     if a.cmd == "selftest":
         return selftest()
+    if a.cmd == "rescore":
+        return cmd_rescore(a.path, a.json, a.t_ref_frac)
     if a.cmd == "summary":
         lo, hi = (float(v) for v in a.band.split(","))
         return cmd_summary(a.paths, a.json, (lo, hi), a.n_stars, a.cl)
@@ -676,7 +888,7 @@ def main():
     if a.cmd == "run":
         return run_slices([meta_from_npz(a.path)], a)
     ks = [int(k) for k in a.coarse.split(",")]
-    return run_slices((read_coarse(a.path, k) for k in ks), a)
+    return run_slices((read_coarse(a.path, k, a.nfine) for k in ks), a)
 
 
 if __name__ == "__main__":
