@@ -306,7 +306,10 @@ def _numba_kernel():
     if _NUMBA_KERNEL is None:
         from numba import njit
 
-        @njit(cache=True)
+        # cache=False: a cached kernel compiled in a spawn worker (module __mp_main__)
+        # fails to load in a later single-process run (ModuleNotFoundError, seen on
+        # the PC); compiling costs ~1-2 s per process.
+        @njit(cache=False)
         def kern(xpad, P, nf, ks, sc, widths, inv_sig, offs, best, bestk, D):
             nt = xpad.shape[0]
             for i in range(ks.size):
