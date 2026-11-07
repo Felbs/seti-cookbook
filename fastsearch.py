@@ -5,8 +5,11 @@ turboSETI re-reads every coarse channel many times (KNOWN_ISSUES.md #4), never
 searches drift exactly 0 (#2), stops short of the drift asked for (#3) and
 quotes an SNR ~4x smaller than the radiometer SNR (#1). This search:
 
-  1. reads each HDF5 file ONCE, one coarse channel at a time (h5py hyperslab
-     data[:, 0, c0:c1]), never the whole file, with a MemAvailable guard;
+  1. reads each HDF5 file in one pass, one coarse channel at a time (h5py
+     hyperslab data[:, 0, c0:c1]), never the whole file, with a MemAvailable
+     guard; each worker takes contiguous coarse channels and a chunk cache big
+     enough to hold the 16 HDF5 chunks a coarse channel shares with the next
+     (2016 GBT chunks are 2^20 channels, coarse channels 1,033,216);
   2. flattens the bandpass per coarse channel with a 1024-channel BLOCK MEDIAN
      of the time-mean spectrum across FREQUENCY (never a per-channel time
      median, which erases steady carriers - law), divides each spectrum by it
@@ -21,10 +24,15 @@ quotes an SNR ~4x smaller than the radiometer SNR (#1). This search:
   4. sums each drift track over a BOXCAR of w = max(1, round(|drift| tsamp/df))
      channels, the width a drifting tone is smeared over inside one spectrum,
      so fast drifters keep their power (measured gain: see FASTSEARCH_RESULT.md);
-  5. quotes SNR in true radiometer units: the zero-drift row's noise is the
-     channel-to-channel noise of the bandpass-removed time-summed spectrum,
-     exactly what inject.radiometer_noise measures; boxcar rows are divided by
-     the measured noise of the same boxcar on that spectrum;
+  5. two strengths per hit. `snr` is the DETECTION significance: each width's
+     rows have their own noise median subtracted and are divided by their own
+     noise spread, both measured on one real drift row of that width
+     (calibrate_rows), so on noise it has mean 0 and spread 1 at every drift
+     (selftest control) and one threshold means one false-alarm rate.
+     `snr_power` is the TRUE radiometer SNR estimate: the same boxcar power over
+     the zero-drift channel-to-channel noise, exactly what
+     inject.radiometer_noise measures. At drift 0 the two agree; for a fast
+     drifter snr_power is ~2-5x snr (its power is spread over w channels);
   6. keeps one best-per-channel map per boxcar-width octave (so a fast wide
      track cannot hide a narrow carrier at the same start channel) and
      suppresses neighbours by TRACK (select_hits): a weaker hit whose track
@@ -33,9 +41,13 @@ quotes an SNR ~4x smaller than the radiometer SNR (#1). This search:
      fast track that carries more than 1.5x the power that track can leak into
      it. turboSETI instead drops everything within a fixed +-max_drift*T/df
      (~406) channels of a stronger hit;
-  7. writes a turboSETI-compatible .dat (find_event_pipeline reads it) and a
-     CSV with detection SNR, power SNR, drift, freq at t=0, coarse channel and
-     the local noise around each hit.
+  7. writes a turboSETI-compatible .dat (find_event_pipeline reads it; its SNR
+     column is the detection significance `snr`), a CSV with snr, snr_power,
+     drift, freq at t=0, coarse channel, local noise and a `capped` flag, and a
+     .summary.json. At most --max-hits hits are kept per coarse channel
+     (default 3000); a capped coarse channel is WARNED about on stderr, flagged
+     in the CSV and listed in the summary (the .dat format has no place for it:
+     turboSETI's read_dat parses every line after the 9th as a hit).
 
 numpy by default; numba is used if installed (same results, faster); cupy only
 with SETI_COOKBOOK_GPU=1 (never required, not verified on real hardware here).
@@ -136,6 +148,22 @@ def normalise(raw, dc_idx=()):
     x -= 1.0
     for c in dc_idx:
         x[:, max(0, c - DC_HALF):min(nf, c + DC_HALF + 1)] = 0.0
+    # The gain above is the MEDIAN of one skewed (chi-square-like) spectrum, which
+    # sits below its mean, so every spectrum keeps a small positive offset (~+0.15
+    # sigma per channel of the time sum on GJ699, measured). Drift rows sum it like
+    # signal, sqrt(w) more in a w-wide boxcar. Remove it: subtract the block median
+    # of the time-summed spectrum (16 spectra summed are nearly Gaussian, so their
+    # median is their mean to ~0.01 sigma), spread equally over the spectra.
+    S = x.sum(0, dtype=np.float64)
+    for c in dc_idx:
+        S[max(0, c - DC_HALF):min(nf, c + DC_HALF + 1)] = np.nan
+    smed = np.array([np.nanmedian(S[a:b]) for a, b in zip(edges[:-1], edges[1:])])
+    ok = np.isfinite(smed)
+    if ok.any():
+        base = np.interp(np.arange(nf), cen[ok], smed[ok]).astype(np.float32)
+        x -= base[None, :] / nt
+    for c in dc_idx:
+        x[:, max(0, c - DC_HALF):min(nf, c + DC_HALF + 1)] = 0.0
     return x, x.sum(0, dtype=np.float64)
 
 
@@ -200,7 +228,43 @@ def _shift(k, t, nt, sc):
     return int(np.floor(k * t / ((nt - 1) * sc) + 0.5))
 
 
-def _dd_numpy(x, ks, sc, widths, sig, xp=np):
+def row_boxcar(xs, k, sc, w):
+    """Raw boxcar sum of one de-Dopplered row (drift index k, scrunch sc, width w
+    scrunched channels) over the channels where every spectrum and the whole
+    boxcar lie inside the slab (no zero padding). Used to CALIBRATE each width."""
+    nt, nf = xs.shape
+    sh = [_shift(k, t, nt, sc) for t in range(nt)]
+    lo = max(0, -min(sh)) + w
+    hi = nf - max(0, max(sh)) - w
+    if hi - lo < 1000:
+        return None
+    D = np.zeros(hi - lo, dtype=np.float64)
+    for t in range(nt):
+        D += xs[t, lo + sh[t]:hi + sh[t]]
+    return boxcar(D.astype(np.float32), w, +1 if k >= 0 else -1)[w:-w]
+
+
+def calibrate_rows(xs, sc, kw, nt, stride=3):
+    """For each boxcar width w: (k_ref, offset, sigma) measured on ONE real
+    de-Dopplered row of that width (its median and robust std). Measuring on a
+    drift row, not on the time-summed spectrum, gives the statistic zero mean and
+    unit spread on noise for every width (a 65-channel high-pass of the summed
+    spectrum underestimated the noise of wide boxcars by 3-17 %, measured).
+    kw: {w: [k, ...]} drift indices of each width; the median |k| one is used."""
+    out = {}
+    for w, ks in kw.items():
+        ks = sorted(ks, key=abs)
+        k = int(ks[len(ks) // 2])
+        B = row_boxcar(xs, k, sc, int(w))
+        if B is None:
+            continue
+        B = B[::stride].astype(np.float64)
+        med = float(np.median(B))
+        out[int(w)] = (k, med, float(1.4826 * np.median(np.abs(B - med))))
+    return out
+
+
+def _dd_numpy(x, ks, sc, widths, sig, off=None, xp=np):
     nt, nf = x.shape
     P = int(np.max(np.abs(ks))) // sc + 2
     xpad = xp.zeros((nt, nf + 2 * P), dtype=xp.float32)
@@ -209,6 +273,7 @@ def _dd_numpy(x, ks, sc, widths, sig, xp=np):
     bestk = xp.zeros(nf, dtype=xp.int32)
     D = xp.empty(nf, dtype=xp.float32)
     c = xp.arange(nf)
+    off = np.zeros(len(ks)) if off is None else np.asarray(off, dtype=np.float64)
     for i, k in enumerate(ks):
         k = int(k)
         D[:] = 0
@@ -222,9 +287,9 @@ def _dd_numpy(x, ks, sc, widths, sig, xp=np):
                 B = cs[xp.minimum(c + w, nf)] - cs[c]
             else:
                 B = cs[c + 1] - cs[xp.maximum(c - w + 1, 0)]
-            B = (B / float(sig[i])).astype(xp.float32)
+            B = ((B - float(off[i])) / float(sig[i])).astype(xp.float32)
         else:
-            B = D / float(sig[i])
+            B = (D - float(off[i])) / float(sig[i])
         upd = B > best
         best = xp.where(upd, B, best)
         bestk = xp.where(upd, k, bestk)
@@ -242,7 +307,7 @@ def _numba_kernel():
         from numba import njit
 
         @njit(cache=True)
-        def kern(xpad, P, nf, ks, sc, widths, inv_sig, best, bestk, D):
+        def kern(xpad, P, nf, ks, sc, widths, inv_sig, offs, best, bestk, D):
             nt = xpad.shape[0]
             for i in range(ks.size):
                 k = ks[i]
@@ -255,9 +320,10 @@ def _numba_kernel():
                         D[c] += row[o + c]
                 w = widths[i]
                 g = inv_sig[i]
+                z = offs[i]
                 if w <= 1:
                     for c in range(nf):
-                        v = D[c] * g
+                        v = (D[c] - z) * g
                         if v > best[c]:
                             best[c] = v
                             bestk[c] = k
@@ -266,7 +332,7 @@ def _numba_kernel():
                     for c in range(min(w, nf)):
                         acc += D[c]
                     for c in range(nf):          # window D[c .. c+w-1]
-                        v = acc * g
+                        v = (acc - z) * g
                         if v > best[c]:
                             best[c] = v
                             bestk[c] = k
@@ -279,7 +345,7 @@ def _numba_kernel():
                         acc += D[c]
                         if c - w >= 0:
                             acc -= D[c - w]
-                        v = acc * g
+                        v = (acc - z) * g
                         if v > best[c]:
                             best[c] = v
                             bestk[c] = k
@@ -287,7 +353,7 @@ def _numba_kernel():
     return _NUMBA_KERNEL
 
 
-def _dd_numba(x, ks, sc, widths, sig):
+def _dd_numba(x, ks, sc, widths, sig, off=None):
     nt, nf = x.shape
     P = int(np.max(np.abs(ks))) // sc + 2
     xpad = np.zeros((nt, nf + 2 * P), dtype=np.float32)
@@ -296,18 +362,19 @@ def _dd_numba(x, ks, sc, widths, sig):
     bestk = np.zeros(nf, dtype=np.int32)
     D = np.empty(nf, dtype=np.float32)
     _numba_kernel()(xpad, P, nf, np.asarray(ks, dtype=np.int64), sc, np.asarray(widths, dtype=np.int64),
-                    (1.0 / np.asarray(sig, dtype=np.float64)), best, bestk, D)
+                    (1.0 / np.asarray(sig, dtype=np.float64)),
+                    np.zeros(len(ks)) if off is None else np.asarray(off, dtype=np.float64), best, bestk, D)
     return best, bestk
 
 
-def dedoppler(x, ks, sc, widths, sig, how=None):
+def dedoppler(x, ks, sc, widths, sig, off=None, how=None):
     how = how or backend()
     if how == "numba":
-        return _dd_numba(x, ks, sc, widths, sig)
+        return _dd_numba(x, ks, sc, widths, sig, off)
     if how == "cupy":
         import cupy as cp
-        return _dd_numpy(x, ks, sc, widths, np.asarray(sig), xp=cp)
-    return _dd_numpy(x, ks, sc, widths, np.asarray(sig))
+        return _dd_numpy(x, ks, sc, widths, np.asarray(sig), off, xp=cp)
+    return _dd_numpy(x, ks, sc, widths, np.asarray(sig), off)
 
 
 def candidates(best, thr, local_win=3):
@@ -391,12 +458,17 @@ def local_noise(S, chans, half=4096):
     return out
 
 
-def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="auto", how=None):
+def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="auto", how=None,
+                cap=MAX_HITS_PER_COARSE):
     """Search one coarse channel (or any contiguous block) of shape (nt, nf).
     Returns (hits, info). hit: dict(ch = start channel at t=0, k, drift Hz/s,
-    snr = detection SNR (true radiometer units), snr_power = boxcar power over the
-    zero-drift radiometer noise (estimates the tone's true SNR), w = boxcar
-    width in channels, s = scrunch, local_noise, noise_ratio)."""
+    snr = DETECTION significance (the track's boxcar sum minus its width's noise
+    median, over its width's noise spread, both measured on a real drift row of that
+    width: zero mean, unit spread on noise for every width; equals true SNR only at
+    drift 0), snr_power = boxcar power over the zero-drift radiometer noise (the
+    estimate of the tone's TRUE radiometer SNR, ~2-5x snr for fast drifters),
+    w = boxcar width in channels, s = scrunch, local_noise, noise_ratio).
+    info["capped"] is True if the hit list was cut at `cap`."""
     nt, nf = raw.shape
     step = abs(foff_hz) / ((nt - 1) * tsamp)
     K = int(np.ceil(max_drift / step - 1e-9))
@@ -421,12 +493,18 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
                     xsc = x[:, ph:ph + m].reshape(nt, m // sc, sc).sum(2, dtype=np.float32)
                     scr[(sc, ph)] = (xsc, xsc.sum(0, dtype=np.float64), m)
                 xs, Ss, m = scr[(sc, ph)]
-            need = [int(v) for v in set(ws.tolist()) if (sc, int(v)) not in noise]
+            need = {}
+            for kv, wv in zip(ks.tolist(), ws.tolist()):
+                if (sc, int(wv)) not in noise:
+                    need.setdefault(int(wv), []).append(int(kv))
             if need:
-                for wv, v in noise_for_widths(Ss, need).items():
-                    noise[(sc, wv)] = v
-            sig = np.array([noise[(sc, int(v))] for v in ws])
-            b, bk = dedoppler(xs, ks, sc, ws, sig, how)
+                cal = calibrate_rows(xs, sc, need, nt)
+                fb = noise_for_widths(Ss, [w for w in need if w not in cal]) if len(cal) < len(need) else {}
+                for wv in need:
+                    noise[(sc, wv)] = cal[wv] if wv in cal else (None, 0.0, fb[wv])
+            off = np.array([noise[(sc, int(v))][1] for v in ws])
+            sig = np.array([noise[(sc, int(v))][2] for v in ws])
+            b, bk = dedoppler(xs, ks, sc, ws, sig, off, how)
             n_drifts += len(ks) / sc
             if sc > 1:
                 b = np.repeat(b, sc)
@@ -442,9 +520,7 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
             bests[band, sl] = np.where(upd, sc, bests[band, sl])
             bestp[band, sl] = np.where(upd, ph, bestp[band, sl])
     del scr
-    if (1, 1) not in noise:
-        noise[(1, 1)] = noise_for_widths(S, [1])[1]
-    sig1 = noise[(1, 1)]
+    sig1 = noise_for_widths(S, [1])[1]       # TRUE radiometer noise (inject.radiometer_noise's definition)
     cb, cc_ = [], []
     n_above = 0
     for band in range(NB):
@@ -454,7 +530,7 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
         cc_.append(ch)
     cb = np.concatenate(cb).astype(int)
     cc_ = np.concatenate(cc_).astype(int)
-    keep = select_hits(cc_, bestk[cb, cc_], bestw[cb, cc_], best[cb, cc_], nt)
+    keep = select_hits(cc_, bestk[cb, cc_], bestw[cb, cc_], best[cb, cc_], nt, cap=cap)
     hits = []
     picks = [(int(cb[i]), int(cc_[i])) for i in keep]
     # a scrunched hit's start is known to its s-channel block: report the block centre
@@ -470,9 +546,10 @@ def search_slab(raw, foff_hz, tsamp, max_drift=4.0, thr=8.0, dc_idx=(), widths="
         snr = float(best[band, c])
         drift = (k / (nt - 1)) * foff_hz / tsamp       # Hz/s; foff<0 -> k>0 is a negative drift
         hits.append(dict(ch=float(ch), k=k, drift=float(drift), snr=snr,
-                         snr_power=float(snr * noise[(sc, w // sc)] / sig1), w=w, s=sc,
+                         snr_power=float(snr * noise[(sc, w // sc)][2] / sig1), w=w, s=sc,
                          local_noise=float(lnz), noise_ratio=float(lnz / sig1)))
     info = dict(K=K, step=step, drift_searched=K * step, sigma1=sig1, n_above=n_above,
+                capped=len(keep) >= cap, cap=cap, calib={f"{a}x{b}": v for (a, b), v in noise.items()},
                 n_drifts_equiv=round(n_drifts, 1), plan=[(sc, band, len(ks)) for sc, band, ks, _ in plan])
     return hits, info
 
@@ -529,18 +606,21 @@ def write_dat(path, rows, h, file_id, max_drift_searched, obs_length):
 
 
 CSV_COLS = ["coarse_chan", "index", "global_chan", "freq_mhz_t0", "freq_mhz_end", "drift_hz_s", "snr",
-            "snr_power", "boxcar_w", "local_noise", "noise_ratio", "n_above_in_coarse"]
+            "snr_power", "boxcar_w", "local_noise", "noise_ratio", "n_above_in_coarse",
+            "capped"]
 
 
 def _worker(args):
     path, coarse_list, nfpc, opts = args
+    cache = int(opts.get("rdcc_nbytes", 0))
     import h5py
     try:
         import hdf5plugin  # noqa: F401
     except ImportError:
         pass
     out = []
-    with h5py.File(path, "r") as f:
+    kw = dict(rdcc_nbytes=cache, rdcc_nslots=100003) if cache else {}
+    with h5py.File(path, "r", **kw) as f:
         h = header_of(f)
         ds = f["data"]
         nt = ds.shape[0]
@@ -552,8 +632,14 @@ def _worker(args):
             raw = ds[:, 0, c0:c0 + nfpc]
             t_read = time.time() - t0
             hits, info = search_slab(raw, foff_hz, float(h["tsamp"]), opts["max_drift"], opts["snr"],
-                                     dc_idx=(nfpc // 2,), widths=opts["widths"])
+                                     dc_idx=(nfpc // 2,), widths=opts["widths"],
+                                     cap=opts.get("max_hits", MAX_HITS_PER_COARSE))
             del raw
+            if info["capped"]:
+                print(f"WARNING: coarse channel {cc}: hit list CUT at the cap of {info['cap']} hits "
+                      f"({info['n_above']} channels above threshold); weaker hits there are missing "
+                      f"(raise --max-hits, or treat the channel as broadband interference)",
+                      file=sys.stderr, flush=True)
             out.append((cc, hits, info, t_read, time.time() - t0))
             if opts.get("verbose"):
                 print(f"  coarse {cc:4d}: {len(hits):5d} hits, read {t_read:5.1f} s, total "
@@ -561,8 +647,21 @@ def _worker(args):
     return out
 
 
+def chunk_cache_bytes(ds, nfpc):
+    """Bytes of chunk cache one worker needs so that a chunk shared by two
+    neighbouring coarse channels is decompressed once, not twice: every chunk
+    a slab touches along time (nt rows x up to 2 chunks), plus a margin."""
+    ch = ds.chunks
+    if not ch:
+        return 0
+    per = int(np.prod(ch)) * ds.dtype.itemsize
+    n_t = int(np.ceil(ds.shape[0] / ch[0]))
+    n_f = int(np.ceil(nfpc / ch[-1])) + 1
+    return int(min(per * n_t * n_f * 1.25, 512 << 20))
+
+
 def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_coarse=None,
-             widths="auto", verbose=True):
+             widths="auto", verbose=True, max_hits=MAX_HITS_PER_COARSE):
     import h5py
     try:
         import hdf5plugin  # noqa: F401
@@ -574,18 +673,20 @@ def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_co
     with h5py.File(path, "r") as f:
         h = header_of(f)
         nt = f["data"].shape[0]
-    nfpc, ncoarse = coarse_width(h, n_coarse)
+        nfpc, ncoarse = coarse_width(h, n_coarse)
+        cache = chunk_cache_bytes(f["data"], nfpc)
     todo = list(range(ncoarse)) if coarse is None else [c for c in coarse if 0 <= c < ncoarse]
-    per_slab = nt * nfpc * 4 * 6
+    per_slab = nt * nfpc * 4 * 6 + cache
     av = mem_available_bytes()
     if av is not None:
         workers = max(1, min(workers, int((av - (1 << 30)) // per_slab)))
     t0 = time.time()
-    opts = dict(max_drift=max_drift, snr=snr, widths=widths, verbose=verbose)
+    opts = dict(max_drift=max_drift, snr=snr, widths=widths, verbose=verbose, max_hits=max_hits,
+                rdcc_nbytes=cache)
     print(f"{path.name}: {nt} spectra x {int(h['nchans'])} ch = {ncoarse} coarse x {nfpc}; "
           f"{len(todo)} to search with {workers} worker(s), backend {backend()}", flush=True)
-    # contiguous runs per worker (each byte read once)
-    chunks = [todo[i::1] for i in range(1)]
+    # contiguous runs per worker (a chunk is re-read only at a run boundary)
+    chunks = [todo]
     if workers > 1:
         n = len(todo)
         bounds = np.linspace(0, n, workers * 4 + 1).astype(int)
@@ -608,6 +709,7 @@ def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_co
     rows = []
     K = step = None
     t_read = sum(r[3] for r in results)
+    capped = [r[0] for r in results if r[2]["capped"]]
     for cc, hits, info, _, _ in results:
         K, step = info["K"], info["step"]
         for hh in hits:
@@ -617,7 +719,7 @@ def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_co
                              freq_end=fr + hh["drift"] * obs_length / 1e6, drift=hh["drift"],
                              snr=hh["snr"], snr_power=hh["snr_power"], w=hh["w"],
                              local_noise=hh["local_noise"], noise_ratio=hh["noise_ratio"],
-                             n_above=info["n_above"]))
+                             n_above=info["n_above"], capped=int(info["capped"])))
     rows.sort(key=lambda r: -r["freq"] if foff < 0 else r["freq"])
     searched = K * step if K is not None else 0.0
     stem = path.name[:-3] if path.name.endswith(".h5") else path.stem
@@ -628,12 +730,21 @@ def run_file(path, out_dir, max_drift=4.0, snr=8.0, workers=1, coarse=None, n_co
         for r in rows:
             wr.writerow([r["coarse"], r["index"], r["global_chan"], f"{r['freq']:.6f}", f"{r['freq_end']:.6f}",
                          f"{r['drift']:.6f}", f"{r['snr']:.3f}", f"{r['snr_power']:.3f}", r["w"],
-                         f"{r['local_noise']:.6g}", f"{r['noise_ratio']:.3f}", r["n_above"]])
+                         f"{r['local_noise']:.6g}", f"{r['noise_ratio']:.3f}", r["n_above"], r["capped"]])
     wall = time.time() - t0
+    import json
+    (out_dir / f"{stem}.summary.json").write_text(json.dumps(dict(
+        file=path.name, n_hits=len(rows), n_coarse_searched=len(results), threshold_snr=snr,
+        snr_column="detection significance (unit spread on noise at every drift); snr_power = true SNR estimate",
+        max_hits_per_coarse=max_hits, capped_coarse_channels=capped, drift_searched_hz_s=searched,
+        drift_step_hz_s=step, wall_s=round(wall, 1), backend=backend()), indent=1))
+    if capped:
+        print(f"WARNING: {len(capped)} coarse channel(s) hit the cap of {max_hits} hits and are TRUNCATED: "
+              f"{capped}", file=sys.stderr, flush=True)
     print(f"done: {len(rows)} hits in {len(results)} coarse channels, wall {wall/60:.2f} min "
           f"(read {t_read/60:.2f} worker-min); drift searched +-{searched:.4f} Hz/s in steps of "
-          f"{step:.6f} (incl. 0); threshold SNR {snr} (true radiometer units)", flush=True)
-    return rows, dict(wall_s=wall, n_coarse=len(results), drift_searched=searched, step=step)
+          f"{step:.6f} (incl. 0); threshold {snr} (detection significance)", flush=True)
+    return rows, dict(wall_s=wall, n_coarse=len(results), drift_searched=searched, step=step, capped=capped)
 
 
 def parse_coarse(s):
@@ -662,6 +773,32 @@ def _synthetic(rng, nt=16, nf=131072, dc=True):
     if dc:
         d[:, nf // 2] *= 25.0
     return d
+
+
+def row_stats(raw, foff_hz, tsamp, max_drift=4.0, dc_idx=(), widths="auto"):
+    """Mean and std of the normalised detection statistic on rows of every
+    (scrunch, width) that were NOT used to calibrate it (the smallest-|k| row of
+    each width, the calibration takes the median-|k| one), interior channels."""
+    nt, nf = raw.shape
+    step = abs(foff_hz) / ((nt - 1) * tsamp)
+    K = int(np.ceil(max_drift / step - 1e-9))
+    _, info = search_slab(raw, foff_hz, tsamp, max_drift, 1e9, dc_idx, widths)
+    x, _ = normalise(raw, dc_idx)
+    out = {}
+    for sc, _, ks, ws in drift_plan(K, nt, widths):
+        xs = x if sc == 1 else x[:, :(nf // sc) * sc].reshape(nt, -1, sc).sum(2, dtype=np.float32)
+        for w in sorted(set(ws.tolist())):
+            kref, off, sig = info["calib"][f"{sc}x{int(w)}"]
+            cand = [int(k) for k, v in zip(ks, ws) if v == w and int(k) != kref]
+            if not cand:
+                continue
+            k = min(cand, key=abs)
+            B = row_boxcar(xs, k, sc, int(w))
+            if B is None:
+                continue
+            z = (B.astype(np.float64) - off) / sig
+            out[f"{sc}x{int(w)}"] = (float(z.mean()), float(z.std()))
+    return out
 
 
 def selftest():
@@ -693,6 +830,18 @@ def selftest():
           f"{rel:.5f}; radiometer eq. 1/sqrt(16*50) = {1/np.sqrt(16*50):.5f}")
     checks.append(("noise unit matches inject.radiometer_noise within 5 %",
                    abs(inf2["sigma1"] / nt / rel - 1) < 0.05))
+
+    # 1b. statistic calibration on noise, every width band: rows OTHER than the ones
+    #     calibrate_rows used must have mean ~0 and spread ~1 (control: the old
+    #     median-gain + high-passed-sum noise gave +0.2 to +0.7 and 3-17 % low noise)
+    rs = row_stats(noise, foff, ts, 4.0)
+    worst_m = max(abs(v[0]) for v in rs.values())
+    worst_s = max(abs(v[1] - 1) for v in rs.values())
+    print("  noise statistic per (scrunch x width): " + ", ".join(
+        f"{key} {m_:+.3f}/{s_:.3f}" for key, (m_, s_) in sorted(rs.items(), key=lambda kv: kv[0])[::4]))
+    print(f"  worst |mean| {worst_m:.3f}, worst |std-1| {worst_s:.3f} over {len(rs)} widths")
+    checks.append(("noise statistic: |mean| < 0.05 for every width", worst_m < 0.05))
+    checks.append(("noise statistic: std within 3 % of 1 for every width", worst_s < 0.03))
 
     # 2. DC spike control: spike present, no plants -> no hit at the DC channel
     rng = np.random.default_rng(8)
@@ -767,6 +916,11 @@ def selftest():
     checks.append(("weak carrier crossed by a strong fast drifter is kept", whyg[3]["status"] == "found"))
     checks.append(("strong tones themselves found", all(w["status"] == "found" for w in whyg[:3])))
 
+    # 3c. cap: a hit list cut at the cap is flagged; an uncut one is not
+    hcap, icap = search_slab(d, foff, ts, 4.0, 8.0, dc_idx=(nf // 2,), cap=3)
+    checks.append(("cap: list cut at 3 hits is flagged capped", len(hcap) == 3 and icap["capped"]))
+    checks.append(("cap: the full list (8 hits, cap 3000) is not flagged", not info["capped"]))
+
     # 4. numpy and numba agree (if numba is here), full-res and scrunched rows
     if how == "numba":
         x, S = normalise(d[:, :16384])
@@ -826,7 +980,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("h5")
     ap.add_argument("--max-drift", type=float, default=4.0)
-    ap.add_argument("--snr", type=float, default=8.0, help="threshold, TRUE radiometer SNR")
+    ap.add_argument("--snr", type=float, default=8.0,
+                    help="threshold on the detection significance (= true radiometer SNR at drift 0)")
+    ap.add_argument("--max-hits", type=int, default=MAX_HITS_PER_COARSE,
+                    help="hits kept per coarse channel (a capped channel is warned about and flagged)")
     ap.add_argument("--out-dir", default=".")
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--coarse", help="e.g. 0-9,150 (default: all)")
@@ -834,7 +991,8 @@ def main():
     ap.add_argument("--widths", default="auto", choices=["auto", "full", "1"],
                     help="auto = boxcar + scrunch fast drifts; full = boxcar at full resolution; 1 = no boxcar")
     a = ap.parse_args()
-    run_file(a.h5, a.out_dir, a.max_drift, a.snr, a.workers, parse_coarse(a.coarse), a.n_coarse, a.widths)
+    run_file(a.h5, a.out_dir, a.max_drift, a.snr, a.workers, parse_coarse(a.coarse), a.n_coarse, a.widths,
+             max_hits=a.max_hits)
     return 0
 
 

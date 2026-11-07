@@ -212,7 +212,32 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def summarise(paths):
+def boot_tables(tables, rng):
+    """One bootstrap replicate: every cell's plants resampled with replacement."""
+    out = []
+    for t in tables:
+        nt_ = {}
+        for key, c in t.items():
+            st = c.get("statuses")
+            if st:
+                draw = rng.integers(0, len(st), len(st))
+                f = sum(st[i] == "found" for i in draw)
+            else:                                   # no per-plant record: binomial
+                f = int(rng.binomial(c["n"], c["found"] / c["n"])) if c["n"] else 0
+            nt_[key] = dict(found=f, n=c["n"])
+        out.append(nt_)
+    return out
+
+
+def snr90_interval(tables, dr, grid, n_boot=400, seed=0):
+    """2.5-97.5 % bootstrap range of snr90 (plants resampled within cells)."""
+    rng = np.random.default_rng(seed)
+    v = [snr90(boot_tables(tables, rng), dr, snrs=grid)[0] for _ in range(n_boot)]
+    v = np.array([np.inf if x is None else x for x in v])
+    return float(np.percentile(v, 2.5)), float(np.percentile(v, 97.5))
+
+
+def summarise(paths, n_boot=400):
     """Pool several runs' JSON: 90 %-recovery TRUE SNR per |drift| for each tool."""
     runs = []
     for p in paths:
@@ -223,14 +248,20 @@ def summarise(paths):
           f"fastsearch {[r['fs_null'] for r in runs]}")
     tools = sorted({t for r in runs for t in r["tables"]})
     grid = sorted({float(k.split("|")[1]) for r in runs for t in r["tables"].values() for k in t})
-    print("|drift| " + "".join(f"{t:>14s}" for t in tools) + "   ratio")
+    print("90 %-recovery TRUE SNR [bootstrap 95 % range, plants resampled within cells]")
+    print("|drift| " + "".join(f"{t:>22s}" for t in tools) + "   ratio")
     rows = {}
     for dr in (0.0, 0.1, 0.5, 1.0, 2.0, 3.5):
-        vals = [snr90([r["tables"][t] for r in runs if t in r["tables"]], dr, snrs=grid)[0] for t in tools]
-        rows[dr] = vals
+        vals, cis = [], []
+        for t in tools:
+            tabs = [r["tables"][t] for r in runs if t in r["tables"]]
+            vals.append(snr90(tabs, dr, snrs=grid)[0])
+            cis.append(snr90_interval(tabs, dr, grid, n_boot) if n_boot else (np.nan, np.nan))
+        rows[dr] = dict(zip(tools, zip(vals, cis)))
         ratio = (vals[1] / vals[0]) if len(vals) == 2 and vals[0] and vals[1] else None
-        print(f"{dr:6.2f} " + "".join(f"{(f'{v:.0f}' if v else '>max'):>14s}" for v in vals)
-              + (f"   {ratio:.1f}x" if ratio else ""))
+        print(f"{dr:6.2f} " + "".join(
+            f"{(f'{v:.0f} [{lo:.0f}-{hi:.0f}]' if v else '>max'):>22s}" for v, (lo, hi) in zip(vals, cis))
+            + (f"   {ratio:.1f}x" if ratio else ""))
     return rows
 
 
@@ -251,7 +282,7 @@ def selftest():
     tab = {"+0.10|10": dict(found=0, n=10), "+0.10|20": dict(found=8, n=10), "+0.10|40": dict(found=10, n=10),
            "-0.10|10": dict(found=0, n=10), "-0.10|20": dict(found=8, n=10), "-0.10|40": dict(found=10, n=10)}
     v, _ = snr90([tab], 0.1, snrs=[10, 20, 40])
-    checks = [("noise only: no hit at true SNR 8", len(h0) == 0),
+    checks = [("noise only: no hit at threshold 8", len(h0) == 0),
               ("all 10 plants found with correct drift", all(w["status"] == "found" for w in why)),
               ("snr90 log-interpolates (0.8 at 20, 1.0 at 40 -> ~28)", v is not None and 26 < v < 30)]
     for name, ok in checks:

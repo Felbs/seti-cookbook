@@ -15,9 +15,14 @@ steps). The reason is then one of:
                    (turboSETI's SNR there was inflated: its noise estimate is
                    lower than the true noise in that channel, or its own SNR is
                    biased by the bandpass shape);
-  suppressed       above threshold, but a stronger fastsearch hit's track crosses
-                   it (track-crossing suppression) - listed with that hit;
-  capped           the coarse channel hit fastsearch's per-coarse-channel cap;
+  above-threshold-unmatched
+                   the statistic is above threshold there but no fastsearch hit
+                   matches the track: usually a different (often wider, stronger)
+                   track was kept nearby, e.g. inside broadband interference, or
+                   fastsearch found it a few channels off. The kept neighbour is
+                   NOT identified by this tool; look in the CSV;
+  capped           the coarse channel hit fastsearch's per-coarse-channel cap
+                   (the CSV's `capped` column, or >= the default cap if absent);
   dc               the turboSETI hit sits on the blanked DC channel;
   other            none of the above (reported, never hidden).
 
@@ -63,7 +68,8 @@ def read_fs_csv(path):
         for r in csv.DictReader(f):
             out.append(dict(mhz=float(r["freq_mhz_t0"]), drift=float(r["drift_hz_s"]), snr=float(r["snr"]),
                             snr_power=float(r["snr_power"]), coarse=int(r["coarse_chan"]),
-                            w=int(r["boxcar_w"]), n_above=int(r["n_above_in_coarse"])))
+                            w=int(r["boxcar_w"]), n_above=int(r["n_above_in_coarse"]),
+                            capped=int(r["capped"]) if r.get("capped") not in (None, "") else None))
     return out
 
 
@@ -114,7 +120,9 @@ def probe(h5, misses, nfpc, max_drift, thr):
         for cc, items in sorted(by_cc.items()):
             raw = ds[:, 0, cc * nfpc:(cc + 1) * nfpc]
             x, S = F.normalise(raw, (nfpc // 2,))
-            nz = F.noise_for_widths(S, list(range(1, 27)))
+            # same calibration as the search: each width's median and spread from a real
+            # drift row of that width (full resolution here)
+            cal = F.calibrate_rows(x, 1, {w: [w * (nt - 1)] for w in range(1, 27)}, nt)
             P = K + 30
             xpad = np.zeros((nt, nfpc + 2 * P), np.float32)
             xpad[:, P:P + nfpc] = x
@@ -130,7 +138,8 @@ def probe(h5, misses, nfpc, max_drift, thr):
                     for t in range(nt):
                         o = P + F._shift(k, t, nt, 1)
                         D += xpad[t, o + lo:o + hi]
-                    B = F.boxcar(D.astype(np.float32), w, 1 if k >= 0 else -1) / nz[min(w, 26)]
+                    _, off, sig = cal[min(w, 26)]
+                    B = (F.boxcar(D.astype(np.float32), w, 1 if k >= 0 else -1) - off) / sig
                     cc_lo, cc_hi = c0 - 3 - lo, c0 + 4 - lo
                     bestv = max(bestv, float(np.max(B[max(0, cc_lo):cc_hi])))
                 out[i] = dict(stat=bestv, dc=abs(c0 - nfpc // 2) <= F.DC_HALF + 1)
@@ -163,7 +172,9 @@ def main():
           f"of which drift agrees: {len(drift_good)}")
     from collections import Counter
     per_cc = Counter(r["coarse"] for r in fs_rows)
-    capped = {c for c, v in per_cc.items() if v >= F.MAX_HITS_PER_COARSE}
+    capped = {r["coarse"] for r in fs_rows if r.get("capped")}
+    if all(r.get("capped") is None for r in fs_rows):        # older CSV without the column
+        capped = {c for c, v in per_cc.items() if v >= F.MAX_HITS_PER_COARSE}
     misses = [(i, h) for i, h in enumerate(ts_rows) if m[i] is None]
     reasons = {}
     detail = []
@@ -177,7 +188,7 @@ def main():
         elif p and p["stat"] < a.thr:
             why = "below-threshold"
         elif p:
-            why = "suppressed"
+            why = "above-threshold-unmatched"
         else:
             why = "not-probed"
         reasons[why] = reasons.get(why, 0) + 1
