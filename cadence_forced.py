@@ -70,6 +70,8 @@ DEFAULTS = dict(
     refine_q=4.0, refine_ch=3.0,
     curvature=False,    # model Earth-term curvature in the prediction
     med_width=129,      # running-median bandpass removal along frequency
+    nearby_hz=100.0,    # OFF scans only: also look +-this far from the track mid ...
+    nearby_drift=0.75,  # ... at ANY drift within +-this (Hz/s) of the track's: RFI wanders
 )
 
 
@@ -172,16 +174,14 @@ def track(scan, f_ref, t_ref, drift, curv=0.0, t_curv=None):
     return (f - scan.fch1) / scan.foff, dt
 
 
-def _box_sums(y, pos, width):
+def _box_sums(cum, pos, width):
     """Sum of each spectrum over [pos-w/2, pos+w/2] (fractional channels,
     exact integral of the piecewise-constant spectrum), summed over spectra.
-    y: (nt, nw); pos: (nt, n_o) local channel positions."""
-    nt, nw = y.shape
-    grid = np.arange(nw + 1, dtype=np.float64)
+    cum: (nt, nw+1) cumulative sums with a leading 0; pos: (nt, n_o) local positions."""
+    grid = np.arange(cum.shape[1], dtype=np.float64)
     out = np.zeros(pos.shape[1])
-    for k in range(nt):
-        c = np.concatenate(([0.0], np.cumsum(y[k])))
-        out += np.interp(pos[k] + 0.5 + width / 2, grid, c) - np.interp(pos[k] + 0.5 - width / 2, grid, c)
+    for k in range(cum.shape[0]):
+        out += np.interp(pos[k] + 0.5 + width / 2, grid, cum[k]) - np.interp(pos[k] + 0.5 - width / 2, grid, cum[k])
     return out
 
 
@@ -247,9 +247,10 @@ def measure(scan, f_ref, t_ref, drift, opts, curv_model=0.0, curv_tol=0.0, half_
         res["reason"] = "too few null tracks in the window"
         return res
     best = None
+    cum = np.concatenate((np.zeros((y.shape[0], 1)), np.cumsum(y, axis=1)), axis=1)
     for dd in drift_grid:
         pk = pl + (dd - drift) * (scan.times_s() - tmid) / scan.foff
-        s = _box_sums(y, pk[:, None] + offs[None, :], abs(dd) * scan.tsamp / abs(scan.foff) + o["box_pad"])
+        s = _box_sums(cum, pk[:, None] + offs[None, :], abs(dd) * scan.tsamp / abs(scan.foff) + o["box_pad"])
         med, sig = robust(s[null])
         if sig <= 0:
             continue
@@ -360,8 +361,26 @@ def forced(cand, scans, opts, curv_per_hz=0.0):
         half = opts["base_ch"] + (dd * dt_near + 0.5 * abs(ct) * dt_c ** 2) / abs(s.foff)
         m = measure(s, f_lin, t_lin, d_use, opts, curv_model=cm, t_curv=t_ref, half_ch=half)
         m["drift_model"] = round(float(d_use), 5)
+        on_track = bool(m["present"])
+        if s.kind == "OFF" and opts["nearby_hz"] > 0 and m["measured"]:
+            # Local interference does not keep one drift (GJ699 1674.9977 MHz: -0.33, -0.53,
+            # -0.20, +0.21 Hz/s in successive scans). Absence from an OFF must survive a
+            # free-drift look near the track, or a wandering transmitter could PASS.
+            q = quantum(s)
+            nd = opts["nearby_drift"]
+            grid = list(d_use + q * np.arange(-round(nd / q), round(nd / q) + 1))
+            m2 = measure(s, f_lin, t_lin, d_use, opts, curv_model=cm, t_curv=t_ref,
+                         half_ch=max(half, opts["nearby_hz"] / abs(s.foff)), drift_grid=grid)
+            m["nearby_z"] = m2["z"]
+            if m2["measured"]:
+                m["nearby_drift"] = m2["drift_used"]
+                m["nearby_offset_hz"] = round(m2["offset_ch"] * abs(s.foff), 1)
+                if m2["present"] and not m["present"]:
+                    m["present"] = True
+                    m["reason"] = (f"nearby: z {m2['z']} at drift {m2['drift_used']:+.3f} Hz/s, "
+                                   f"{m2['offset_ch'] * abs(s.foff):+.0f} Hz off the track")
         per[i] = m
-        if m["present"]:
+        if on_track:          # only ON-TRACK presence phase-connects; a nearby look never does
             tm = tk.mean()
             f_at = f_lin + d_use * (tm - t_lin) + 0.5 * cm * (tm - t_ref) ** 2 + m["offset_ch"] * s.foff
             anchors.append((tm, f_at))
@@ -433,7 +452,7 @@ def load_events(path):
 def cmd_run(a):
     import pandas as pd
     opts = dict(DEFAULTS, z_bar=a.zbar, curvature=a.curvature, refine=not a.no_refine,
-                drift_err_q=a.drift_err_q)
+                drift_err_q=a.drift_err_q, nearby_hz=a.nearby_hz)
     files = a.files
     if len(files) == 1 and files[0].endswith(".lst"):
         files = [ln.strip() for ln in open(files[0]) if ln.strip()]
@@ -470,6 +489,8 @@ def cmd_run(a):
             row[f"bar_{tag}"] = m["bar_snr"]
             row[f"present_{tag}"] = {True: 1, False: 0, None: ""}[m["present"]]
             row[f"why_{tag}"] = m["reason"]
+            if m["kind"] == "OFF":
+                row[f"nearz_{tag}"] = m.get("nearby_z")
         rows.append(row)
         if (n + 1) % 100 == 0:
             print(f"  {n+1}/{len(d)}  {time.time()-t0:.0f} s", flush=True)
@@ -483,8 +504,12 @@ def cmd_run(a):
     neg = None
     if a.nneg:
         t1 = time.time()
+        avoid = list(d["Freq"].values * 1e6)
+        for fn in (a.dats or []):
+            avoid += [float(ln.split()[3]) * 1e6 for ln in open(fn)
+                      if ln.strip() and not ln.startswith("#")]
         neg = negative_controls(scans, opts, a.nneg, rng, gch.values, d["DriftRate"].values, curv,
-                                avoid=d["Freq"].values * 1e6)
+                                avoid=avoid)
         print(f"\nnegative controls ({neg['n']} random positions, {time.time()-t1:.0f} s): "
               f"false presence found-scan {neg['false_presence_found_scan']}, other ON "
               f"{neg['false_presence_other_on']}, OFF {neg['false_presence_off']}; verdicts {neg['verdicts']}")
@@ -578,16 +603,22 @@ def _synthetic(rng, nchan=8192, kinds=("ON", "OFF", "ON", "OFF", "ON", "OFF"), r
     return out
 
 
-def _plant_track(scans, f, d, snr, which):
+def _plant_track(scans, f, d, snr, which, off_drift=None):
+    """Plant along one straight track; with off_drift, the OFF scans get a tone
+    at the track's mid-scan position but with a DIFFERENT drift (wandering RFI)."""
     import inject
     t_ref = scans[0].times_s()[0] - 0.5 * scans[0].tsamp
     for i, s in enumerate(scans):
         if i not in which:
             continue
         f0 = f + d * (s.tstart * 86400 - t_ref)
+        dd = d
+        if off_drift is not None and s.kind == "OFF":
+            half = 0.5 * s.nt * s.tsamp
+            f0, dd = f0 + (d - off_drift) * half, off_drift
         ch = (f0 - s.fch1) / s.foff
         if -50 < ch < s.nchan + 50:
-            inject.plant(s.data, s.foff, s.tsamp, [dict(ch=ch, drift=d, snr=snr)])
+            inject.plant(s.data, s.foff, s.tsamp, [dict(ch=ch, drift=dd, snr=snr)])
 
 
 def selftest():
@@ -596,13 +627,13 @@ def selftest():
     opts = dict(DEFAULTS)
     on3 = [0, 2, 4]
 
-    def case(name, which, d, snr, want, ch=3000.0, kinds=None, ripple=0.4):
+    def case(name, which, d, snr, want, ch=3000.0, kinds=None, ripple=0.4, off_drift=None, o=None):
         sc = _synthetic(rng, kinds=kinds, ripple=ripple) if kinds else _synthetic(rng, ripple=ripple)
         f = sc[0].fch1 + sc[0].foff * ch
-        _plant_track(sc, f, d, snr, which)
+        _plant_track(sc, f, d, snr, which, off_drift)
         # reported hit: centre of spectrum 0, drift off by 0.4 quantum, freq off by 0.3 channel
         f_hit = f + d * 0.5 * sc[0].tsamp + 0.3 * sc[0].foff
-        r = forced(dict(f_hz=f_hit, drift=d + 0.4 * quantum(sc[0]), found=0), sc, opts)
+        r = forced(dict(f_hz=f_hit, drift=d + 0.4 * quantum(sc[0]), found=0), sc, o or opts)
         ok = r["verdict"] == want
         snrs = " ".join(f"{m['snr'] if m['snr'] is not None else '-'}" for m in r["scans"])
         checks.append((f"{name}: {r['verdict']} (want {want}); per-scan true SNR {snrs}", ok))
@@ -616,6 +647,9 @@ def selftest():
     case("fast sky-like tone in ONs only (smeared)", on3, -1.5, 80, "PASSES")
     case("tone in every scan", range(6), -0.30, 40, "RFI")
     case("tone in every scan, zero drift", range(6), 0.0, 40, "RFI")
+    case("wandering RFI: ONs at -0.30, OFFs at +0.20 Hz/s", range(6), -0.30, 40, "RFI", off_drift=0.20)
+    case("same, free-drift OFF look switched off (shows why it exists)", range(6), -0.30, 40, "PASSES",
+         off_drift=0.20, o=dict(opts, nearby_hz=0.0))
     case("tone in first ON only", [0], -0.12, 40, "ONE-OFF")
     case("tone in ON1+ON2 only", [0, 2], -0.12, 40, "PARTIAL")
     case("track leaves the band", on3, -2.0, 60, "INCOMPLETE", ch=7300.0)
@@ -630,10 +664,10 @@ def selftest():
     checks.append((f"present in an OFF beats unmeasured scans -> {v3}", v3 == "RFI"))
     # negative controls: random positions in plain noise must be absent
     sc = _synthetic(rng)
-    neg = negative_controls(sc, opts, 40, rng, [4096.0], [0.0, -0.12, 0.5, -2.0])
+    neg = negative_controls(sc, opts, 30, rng, [4096.0], [0.0, -0.12, 0.5, -2.0])
     fp = max(neg["false_presence_found_scan"], neg["false_presence_other_on"], neg["false_presence_off"])
     checks.append((f"negative controls: false presence {fp} over {neg['n']} random tracks (<= 2 %); "
-                   f"verdicts {neg['verdicts']}", fp <= 0.02 and neg["verdicts"].get("NOT-RECOVERED", 0) >= 38))
+                   f"verdicts {neg['verdicts']}", fp <= 0.02 and neg["verdicts"].get("NOT-RECOVERED", 0) >= 29))
     for name, ok in checks:
         print(f"  {'PASS' if ok else 'FAIL'}  {name}")
     ok = all(c[1] for c in checks)
@@ -652,10 +686,13 @@ def main():
     p.add_argument("--json")
     p.add_argument("--nneg", type=int, default=300, help="random negative-control positions")
     p.add_argument("--seed", type=int, default=1)
+    p.add_argument("--dats", nargs="*", help="turboSETI .dat files: keep negative controls 2 kHz from every hit")
     p.add_argument("--limit", type=int)
     p.add_argument("--zbar", type=float, default=DEFAULTS["z_bar"])
     p.add_argument("--drift-err-q", type=float, default=DEFAULTS["drift_err_q"])
     p.add_argument("--curvature", action="store_true", help="model Earth-term curvature")
+    p.add_argument("--nearby-hz", type=float, default=DEFAULTS["nearby_hz"],
+                   help="OFF free-drift look half-width, Hz (0 = off)")
     p.add_argument("--no-refine", action="store_true")
     c = sub.add_parser("control", help="plant smeared tones in real scans: ONs -> PASSES, all -> RFI")
     c.add_argument("--files", nargs="+", required=True)

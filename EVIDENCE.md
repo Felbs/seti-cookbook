@@ -30,6 +30,7 @@ a limit is worth):
 | Barnard's Star 1400–1500 MHz (July) | cadence_GJ699_*.json | E1, incomplete | killed | strict re-run after the fix not recorded |
 | Barnard's Star hydrogen-line beacon | HI_STARFRAME_RESULT.md | E2 | — | null < ~12 Jy ≈ 5 GW; own local-noise detector; plants not smeared (small effect at −0.11 Hz/s) |
 | Barnard's Star full cadence 1.1–1.9 GHz | GJ699_CADENCE_RESULT.md | **E2** (slow drifts), E1 above 0.5 Hz/s | — | null < ~56 Jy ≈ 22 GW for \|drift\| ≤ 0.15 Hz/s; completeness measured in one coarse channel, noise ratio band-wide |
+| Barnard's Star forced cadence check (1,029 + 27 rows) | FORCED_CADENCE_RESULT.md, `cadence_forced.py` | **E2** (≤ 0.5 Hz/s), E1 faster | — | 0 PASSES; all 9 filter-3 GEO events measured present in every OFF; plants in real data never called the wrong way |
 | Barnard's Star keyed carriers | `keying.py` | E1 | — | selftest on real noise; no completeness curve yet |
 | SDSS laser lines, 199 stars | LASER_LINES_RESULT.md | E2 | 1 (3 survivors) | 2 of 3 in telluric bands (post hoc); follow-up needs new spectra |
 
