@@ -16,9 +16,9 @@ Status: **Open** · **Mitigated** (worked around here) · **Won't fix** (upstrea
 - **Symptom:** `max_drift=4` searched ±3.78 Hz/s on GJ699 fine-res files (largest drift in the hit list).
 - **Workaround:** quote the searched range from the output (law L11).
 
-### 4. turboSETI reads each coarse channel many times — Open
+### 4. turboSETI reads each coarse channel many times — Mitigated
 - **Symptom:** ~18× re-reads of each file; the 77 GB GJ699 cadence took hours.
-- **Plan:** single-read coarse-channel search (step 2).
+- **Workaround:** `fastsearch.py` reads each file in one pass, one coarse channel per hyperslab, with a chunk cache so chunks shared by neighbouring coarse channels are not re-read (synthetic file with GBT chunk geometry: 1.00× the file's bytes vs 1.76× with h5py's default cache). It searches drift 0 and the whole asked range, and quotes true radiometer SNR (FASTSEARCH_RESULT.md). Measured like-for-like on 8 coarse channels of GJ699 0003: 51.8 s CPU (numba) or 74.4 s (numpy) vs turboSETI 111.1 s; a full 12.8 GB file took 11.1 min with 3 workers.
 
 ### 5. Archive names match by prefix — Mitigated
 - **Symptom:** `?target=HIP2` returns 1,982 files of other stars.
@@ -31,3 +31,8 @@ Status: **Open** · **Mitigated** (worked around here) · **Won't fix** (upstrea
 
 ### 7. Mid-resolution (.0002) drift vetoes are void — Mitigated
 - **Cause:** drift quantum ~9.8 Hz/s, wider than any planet's drift (`drift_audit.py`). `star_sweep.py` prints UNRESOLVED.
+
+### 8. 2016 GBT fine-res coarse channels are 1,033,216 channels, not 2^20 — Mitigated
+- **Symptom:** the GJ699 2016-03-10 files have 264,503,296 channels = 256 coarse channels of 1,033,216 (2.9296875 MHz at 2.8355 Hz); the DC spike sits at k × 1,033,216 + 516,608 (checked in the 0003 slice: channel 232,960 of the slice = coarse 155's centre).
+- **Impact:** the `hi_starframe` .npz slices (1,048,576 channels from ch0 = 160,432,128 = 153 × 2^20, i.e. starting 27 % into coarse 155) straddle two coarse channels; `recovery.py` ran turboSETI on the whole slice, with its DC blanking at the slice centre instead of at the real spike and a coarse boundary inside. Re-measured on the clean 749,568-channel part of coarse 155 with the spike repaired (`fastsearch_recovery.py`), turboSETI's 90 % points are close to the published ones (62 / 294 / 1406 at 0.1 / 1 / 3.5 Hz/s in the first six-seed run vs ~70 / ~300 / ~1200; a later six-seed run with a different plant layout gave 65 / 510 / 941, so turboSETI's 90 % points are uncertain by up to ~2×, FASTSEARCH_RESULT.md).
+- **Workaround:** `fastsearch.py` takes the coarse width the way blimpy does (2^20 if it divides, else 2.9296875 MHz for GBT); `fastsearch_recovery.py` uses only the part of a slice inside one coarse channel.

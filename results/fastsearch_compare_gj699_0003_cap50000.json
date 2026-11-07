@@ -1,0 +1,1116 @@
+{
+ "n_ts": 2644,
+ "n_fs": 140876,
+ "found": 2506,
+ "drift_agrees": 2505,
+ "reasons": {
+  "above-threshold-unmatched": 134,
+  "below-threshold": 4
+ },
+ "misses": [
+  {
+   "mhz": 1694.665615,
+   "drift": -0.987931,
+   "ts_snr": 17.597391,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 53.48
+  },
+  {
+   "mhz": 1694.622529,
+   "drift": -0.893342,
+   "ts_snr": 12.053462,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 71.95
+  },
+  {
+   "mhz": 1694.619433,
+   "drift": -0.220708,
+   "ts_snr": 11.909821,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 57.39
+  },
+  {
+   "mhz": 1694.604376,
+   "drift": 0.03153,
+   "ts_snr": 15.7364,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 65.64
+  },
+  {
+   "mhz": 1694.598382,
+   "drift": 0.03153,
+   "ts_snr": 16.631359,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 65.5
+  },
+  {
+   "mhz": 1694.544224,
+   "drift": 0.714674,
+   "ts_snr": 12.181634,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 58.33
+  },
+  {
+   "mhz": 1694.520551,
+   "drift": -0.620085,
+   "ts_snr": 11.18668,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 43.93
+  },
+  {
+   "mhz": 1694.517383,
+   "drift": 0.05255,
+   "ts_snr": 12.34824,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 46.24
+  },
+  {
+   "mhz": 1694.511395,
+   "drift": 0.094589,
+   "ts_snr": 10.223275,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 38.18
+  },
+  {
+   "mhz": 1694.508395,
+   "drift": 0.105099,
+   "ts_snr": 15.353916,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 53.04
+  },
+  {
+   "mhz": 1694.505188,
+   "drift": 0.651614,
+   "ts_snr": 11.127591,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 45.14
+  },
+  {
+   "mhz": 1694.460483,
+   "drift": -0.609575,
+   "ts_snr": 10.013383,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 33.01
+  },
+  {
+   "mhz": 1694.454393,
+   "drift": -0.115609,
+   "ts_snr": 13.495646,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 47.35
+  },
+  {
+   "mhz": 1694.439396,
+   "drift": -0.084079,
+   "ts_snr": 23.031162,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 79.7
+  },
+  {
+   "mhz": 1694.430367,
+   "drift": 0.147139,
+   "ts_snr": 15.798177,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 54.46
+  },
+  {
+   "mhz": 1694.418237,
+   "drift": 0.588555,
+   "ts_snr": 18.608366,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 86.85
+  },
+  {
+   "mhz": 1694.41239,
+   "drift": -0.05255,
+   "ts_snr": 12.750469,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 44.83
+  },
+  {
+   "mhz": 1694.409413,
+   "drift": -0.105099,
+   "ts_snr": 10.40629,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 35.32
+  },
+  {
+   "mhz": 1694.379388,
+   "drift": 0.073569,
+   "ts_snr": 12.33924,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 42.13
+  },
+  {
+   "mhz": 1694.373391,
+   "drift": 0.01051,
+   "ts_snr": 11.754131,
+   "coarse": 62,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 39.84
+  },
+  {
+   "mhz": 1691.135172,
+   "drift": 0.063059,
+   "ts_snr": 13.924026,
+   "coarse": 63,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 47.34
+  },
+  {
+   "mhz": 1691.116733,
+   "drift": 0.063059,
+   "ts_snr": 15.558311,
+   "coarse": 63,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 52.52
+  },
+  {
+   "mhz": 1691.112122,
+   "drift": 0.073569,
+   "ts_snr": 16.339567,
+   "coarse": 63,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 54.39
+  },
+  {
+   "mhz": 1691.098866,
+   "drift": 0.073569,
+   "ts_snr": 16.993467,
+   "coarse": 63,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 56.1
+  },
+  {
+   "mhz": 1646.655177,
+   "drift": -2.732576,
+   "ts_snr": 26.559742,
+   "coarse": 78,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 54.39
+  },
+  {
+   "mhz": 1626.137854,
+   "drift": -3.363171,
+   "ts_snr": 50.988003,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 192.25
+  },
+  {
+   "mhz": 1626.132484,
+   "drift": -2.385749,
+   "ts_snr": 29.715311,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 33.49
+  },
+  {
+   "mhz": 1626.109015,
+   "drift": -0.840793,
+   "ts_snr": 16.172998,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 93.78
+  },
+  {
+   "mhz": 1626.105762,
+   "drift": -1.11405,
+   "ts_snr": 12.719652,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 72.7
+  },
+  {
+   "mhz": 1626.103327,
+   "drift": 2.070452,
+   "ts_snr": 12.577209,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 100.82
+  },
+  {
+   "mhz": 1625.899899,
+   "drift": 1.975863,
+   "ts_snr": 40.016949,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 205.22
+  },
+  {
+   "mhz": 1625.85835,
+   "drift": -3.110933,
+   "ts_snr": 40.362743,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 50.0
+  },
+  {
+   "mhz": 1625.816181,
+   "drift": -2.953284,
+   "ts_snr": 43.456276,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 156.98
+  },
+  {
+   "mhz": 1625.775157,
+   "drift": 1.776174,
+   "ts_snr": 23.257492,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 114.71
+  },
+  {
+   "mhz": 1625.741947,
+   "drift": -1.765665,
+   "ts_snr": 14.519468,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 25.1
+  },
+  {
+   "mhz": 1625.73876,
+   "drift": -2.532888,
+   "ts_snr": 19.33297,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 54.79
+  },
+  {
+   "mhz": 1625.735647,
+   "drift": -1.713115,
+   "ts_snr": 41.052757,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 118.97
+  },
+  {
+   "mhz": 1625.695714,
+   "drift": 3.184502,
+   "ts_snr": 28.804832,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 74.06
+  },
+  {
+   "mhz": 1625.656757,
+   "drift": 1.450367,
+   "ts_snr": 21.923626,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 59.57
+  },
+  {
+   "mhz": 1625.528984,
+   "drift": 1.828724,
+   "ts_snr": 44.656319,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 297.36
+  },
+  {
+   "mhz": 1625.523585,
+   "drift": -3.047873,
+   "ts_snr": 17.800434,
+   "coarse": 85,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 138.54
+  },
+  {
+   "mhz": 1624.20862,
+   "drift": 2.963794,
+   "ts_snr": 16.395195,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 77.9
+  },
+  {
+   "mhz": 1624.127488,
+   "drift": 2.921754,
+   "ts_snr": 10.020209,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 60.99
+  },
+  {
+   "mhz": 1623.964302,
+   "drift": -3.058383,
+   "ts_snr": 10.291833,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 23.86
+  },
+  {
+   "mhz": 1623.923224,
+   "drift": -3.342151,
+   "ts_snr": 15.006914,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 68.94
+  },
+  {
+   "mhz": 1623.88104,
+   "drift": -0.03153,
+   "ts_snr": 13.683393,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 18.7
+  },
+  {
+   "mhz": 1623.874814,
+   "drift": -1.513427,
+   "ts_snr": 12.654557,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 18.41
+  },
+  {
+   "mhz": 1623.833821,
+   "drift": -3.510309,
+   "ts_snr": 11.619022,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 45.65
+  },
+  {
+   "mhz": 1623.798144,
+   "drift": -2.942774,
+   "ts_snr": 15.912419,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 59.21
+  },
+  {
+   "mhz": 1623.795519,
+   "drift": 2.165041,
+   "ts_snr": 10.780301,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 19.24
+  },
+  {
+   "mhz": 1623.755484,
+   "drift": -2.490848,
+   "ts_snr": 17.041349,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 39.88
+  },
+  {
+   "mhz": 1623.747587,
+   "drift": -0.998441,
+   "ts_snr": 18.902769,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 36.68
+  },
+  {
+   "mhz": 1623.743524,
+   "drift": -2.890225,
+   "ts_snr": 11.451211,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 61.59
+  },
+  {
+   "mhz": 1623.708483,
+   "drift": -1.881274,
+   "ts_snr": 16.703962,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 31.24
+  },
+  {
+   "mhz": 1623.700864,
+   "drift": 2.722066,
+   "ts_snr": 11.435575,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 50.75
+  },
+  {
+   "mhz": 1623.627107,
+   "drift": -1.355778,
+   "ts_snr": 10.396216,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 46.43
+  },
+  {
+   "mhz": 1623.503056,
+   "drift": -3.41572,
+   "ts_snr": 13.363642,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 30.88
+  },
+  {
+   "mhz": 1622.829406,
+   "drift": -1.555466,
+   "ts_snr": 10.83367,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 32.7
+  },
+  {
+   "mhz": 1622.825116,
+   "drift": 1.429348,
+   "ts_snr": 13.857093,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 66.19
+  },
+  {
+   "mhz": 1622.596813,
+   "drift": 3.573369,
+   "ts_snr": 10.31775,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 33.68
+  },
+  {
+   "mhz": 1622.588777,
+   "drift": -3.352661,
+   "ts_snr": 12.218527,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 77.0
+  },
+  {
+   "mhz": 1622.555794,
+   "drift": -3.552349,
+   "ts_snr": 15.071671,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 32.56
+  },
+  {
+   "mhz": 1622.54676,
+   "drift": -3.552349,
+   "ts_snr": 11.628051,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 62.8
+  },
+  {
+   "mhz": 1622.513389,
+   "drift": -2.774616,
+   "ts_snr": 10.37205,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 15.61
+  },
+  {
+   "mhz": 1622.431236,
+   "drift": -2.038922,
+   "ts_snr": 12.623181,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 50.18
+  },
+  {
+   "mhz": 1622.422202,
+   "drift": -3.216032,
+   "ts_snr": 11.204873,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 56.86
+  },
+  {
+   "mhz": 1622.381093,
+   "drift": -3.289601,
+   "ts_snr": 11.176096,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 70.62
+  },
+  {
+   "mhz": 1622.250515,
+   "drift": -3.40521,
+   "ts_snr": 10.196462,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 41.29
+  },
+  {
+   "mhz": 1622.244876,
+   "drift": 1.565976,
+   "ts_snr": 22.785061,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 87.56
+  },
+  {
+   "mhz": 1622.160154,
+   "drift": -0.536005,
+   "ts_snr": 10.101048,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 25.56
+  },
+  {
+   "mhz": 1621.838934,
+   "drift": -2.806145,
+   "ts_snr": 10.343635,
+   "coarse": 86,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 70.47
+  },
+  {
+   "mhz": 1621.24297,
+   "drift": -2.743086,
+   "ts_snr": 14.675802,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 73.02
+  },
+  {
+   "mhz": 1620.268564,
+   "drift": -3.47878,
+   "ts_snr": 20.603609,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 88.78
+  },
+  {
+   "mhz": 1620.224318,
+   "drift": -3.38419,
+   "ts_snr": 18.674368,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 69.59
+  },
+  {
+   "mhz": 1620.219458,
+   "drift": -2.764106,
+   "ts_snr": 17.104551,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 67.47
+  },
+  {
+   "mhz": 1620.192155,
+   "drift": 1.029971,
+   "ts_snr": 16.142672,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 55.63
+  },
+  {
+   "mhz": 1620.182359,
+   "drift": 2.165041,
+   "ts_snr": 11.486758,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 54.4
+  },
+  {
+   "mhz": 1620.176974,
+   "drift": -2.522378,
+   "ts_snr": 10.250756,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 34.63
+  },
+  {
+   "mhz": 1620.144905,
+   "drift": -1.17711,
+   "ts_snr": 10.909824,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 27.97
+  },
+  {
+   "mhz": 1620.098938,
+   "drift": 2.869205,
+   "ts_snr": 15.398791,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 54.84
+  },
+  {
+   "mhz": 1620.016822,
+   "drift": 2.228101,
+   "ts_snr": 10.849861,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 48.77
+  },
+  {
+   "mhz": 1619.735585,
+   "drift": -0.262748,
+   "ts_snr": 19.514898,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 28.03
+  },
+  {
+   "mhz": 1619.73269,
+   "drift": -3.258071,
+   "ts_snr": 23.30114,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 99.84
+  },
+  {
+   "mhz": 1619.691337,
+   "drift": -3.499799,
+   "ts_snr": 37.182945,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 139.87
+  },
+  {
+   "mhz": 1619.656583,
+   "drift": -3.510309,
+   "ts_snr": 12.36399,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 18.04
+  },
+  {
+   "mhz": 1619.650276,
+   "drift": -1.849744,
+   "ts_snr": 21.430779,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 85.61
+  },
+  {
+   "mhz": 1619.564812,
+   "drift": -3.216032,
+   "ts_snr": 13.89753,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 97.04
+  },
+  {
+   "mhz": 1619.529008,
+   "drift": -2.438299,
+   "ts_snr": 27.791105,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 137.02
+  },
+  {
+   "mhz": 1619.444016,
+   "drift": -3.594388,
+   "ts_snr": 11.397564,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 63.07
+  },
+  {
+   "mhz": 1619.439627,
+   "drift": -2.585437,
+   "ts_snr": 14.818441,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 77.05
+  },
+  {
+   "mhz": 1619.320091,
+   "drift": 0.567535,
+   "ts_snr": 10.041564,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 32.99
+  },
+  {
+   "mhz": 1618.95866,
+   "drift": -2.911245,
+   "ts_snr": 15.20228,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 51.69
+  },
+  {
+   "mhz": 1618.954756,
+   "drift": 1.471387,
+   "ts_snr": 14.39264,
+   "coarse": 87,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 67.48
+  },
+  {
+   "mhz": 1618.545023,
+   "drift": -0.819773,
+   "ts_snr": 12.550839,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 50.63
+  },
+  {
+   "mhz": 1618.495824,
+   "drift": 1.975863,
+   "ts_snr": 10.482961,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 50.67
+  },
+  {
+   "mhz": 1618.461571,
+   "drift": 3.205522,
+   "ts_snr": 10.619009,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 39.31
+  },
+  {
+   "mhz": 1618.420176,
+   "drift": -2.3332,
+   "ts_snr": 48.308456,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 236.24
+  },
+  {
+   "mhz": 1618.412593,
+   "drift": -2.774616,
+   "ts_snr": 20.677639,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 114.84
+  },
+  {
+   "mhz": 1618.379336,
+   "drift": -3.615408,
+   "ts_snr": 20.340681,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 84.91
+  },
+  {
+   "mhz": 1618.374243,
+   "drift": -0.588555,
+   "ts_snr": 13.555138,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 31.64
+  },
+  {
+   "mhz": 1618.188719,
+   "drift": -2.427789,
+   "ts_snr": 11.008066,
+   "coarse": 88,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 18.77
+  },
+  {
+   "mhz": 1575.84301,
+   "drift": 0.01051,
+   "ts_snr": 30.928717,
+   "coarse": 102,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 106.38
+  },
+  {
+   "mhz": 1575.515011,
+   "drift": 0.01051,
+   "ts_snr": 37.355431,
+   "coarse": 102,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 111.29
+  },
+  {
+   "mhz": 1575.211011,
+   "drift": 0.01051,
+   "ts_snr": 45.903755,
+   "coarse": 102,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 142.35
+  },
+  {
+   "mhz": 1574.983011,
+   "drift": 0.01051,
+   "ts_snr": 30.936464,
+   "coarse": 102,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 113.33
+  },
+  {
+   "mhz": 1557.858725,
+   "drift": 0.01051,
+   "ts_snr": 45.920204,
+   "coarse": 108,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 196.76
+  },
+  {
+   "mhz": 1557.845342,
+   "drift": -0.578045,
+   "ts_snr": 27.40712,
+   "coarse": 108,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 14.32
+  },
+  {
+   "mhz": 1557.677956,
+   "drift": 0.084079,
+   "ts_snr": 55.754135,
+   "coarse": 108,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 17.84
+  },
+  {
+   "mhz": 1557.665993,
+   "drift": 0.126119,
+   "ts_snr": 55.434467,
+   "coarse": 108,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 19.77
+  },
+  {
+   "mhz": 1556.898034,
+   "drift": 0.02102,
+   "ts_snr": 336.674713,
+   "coarse": 109,
+   "reason": "below-threshold",
+   "fs_stat": 2.08
+  },
+  {
+   "mhz": 1556.325001,
+   "drift": 0.01051,
+   "ts_snr": 667.818542,
+   "coarse": 109,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 60.71
+  },
+  {
+   "mhz": 1555.821867,
+   "drift": 3.331641,
+   "ts_snr": 13.082573,
+   "coarse": 109,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 23.42
+  },
+  {
+   "mhz": 1555.81953,
+   "drift": 0.336317,
+   "ts_snr": 13.294685,
+   "coarse": 109,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 14.75
+  },
+  {
+   "mhz": 1555.504299,
+   "drift": -1.839234,
+   "ts_snr": 257.339996,
+   "coarse": 109,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 143.74
+  },
+  {
+   "mhz": 1554.625565,
+   "drift": 0.01051,
+   "ts_snr": 11.136418,
+   "coarse": 109,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 63.07
+  },
+  {
+   "mhz": 1545.219885,
+   "drift": 0.02102,
+   "ts_snr": 22.219923,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 159.6
+  },
+  {
+   "mhz": 1545.214886,
+   "drift": 0.01051,
+   "ts_snr": 21.650784,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 140.01
+  },
+  {
+   "mhz": 1545.204968,
+   "drift": 0.178668,
+   "ts_snr": 18.584568,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 118.47
+  },
+  {
+   "mhz": 1545.164984,
+   "drift": 0.01051,
+   "ts_snr": 24.565155,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 140.4
+  },
+  {
+   "mhz": 1545.159895,
+   "drift": 0.01051,
+   "ts_snr": 26.691504,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 151.8
+  },
+  {
+   "mhz": 1545.110109,
+   "drift": -0.945892,
+   "ts_snr": 802.053467,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 7577.78
+  },
+  {
+   "mhz": 1545.089895,
+   "drift": 0.01051,
+   "ts_snr": 31.681587,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 161.93
+  },
+  {
+   "mhz": 1545.069893,
+   "drift": 0.02102,
+   "ts_snr": 32.402611,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 159.69
+  },
+  {
+   "mhz": 1545.024894,
+   "drift": 0.01051,
+   "ts_snr": 31.49127,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 157.91
+  },
+  {
+   "mhz": 1545.020178,
+   "drift": -0.630594,
+   "ts_snr": 23.438105,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 194.78
+  },
+  {
+   "mhz": 1542.60013,
+   "drift": 0.872322,
+   "ts_snr": 10.977325,
+   "coarse": 113,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 124.0
+  },
+  {
+   "mhz": 1540.020165,
+   "drift": -0.798753,
+   "ts_snr": 21.340689,
+   "coarse": 114,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 106.55
+  },
+  {
+   "mhz": 1539.901924,
+   "drift": 2.427789,
+   "ts_snr": 27.013151,
+   "coarse": 114,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 113.51
+  },
+  {
+   "mhz": 1537.02291,
+   "drift": -0.01051,
+   "ts_snr": 21.228111,
+   "coarse": 115,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 99.16
+  },
+  {
+   "mhz": 1535.719001,
+   "drift": -0.399377,
+   "ts_snr": 24.654467,
+   "coarse": 116,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 110.47
+  },
+  {
+   "mhz": 1535.710316,
+   "drift": 2.785126,
+   "ts_snr": 33.528862,
+   "coarse": 116,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 61.67
+  },
+  {
+   "mhz": 1420.608867,
+   "drift": -2.217591,
+   "ts_snr": 17.94058,
+   "coarse": 155,
+   "reason": "below-threshold",
+   "fs_stat": 0.58
+  },
+  {
+   "mhz": 1420.606613,
+   "drift": -2.31218,
+   "ts_snr": 17.865931,
+   "coarse": 155,
+   "reason": "below-threshold",
+   "fs_stat": 2.28
+  },
+  {
+   "mhz": 1420.593465,
+   "drift": 0.451926,
+   "ts_snr": 11.79353,
+   "coarse": 155,
+   "reason": "below-threshold",
+   "fs_stat": 4.82
+  },
+  {
+   "mhz": 1250.029173,
+   "drift": -2.228101,
+   "ts_snr": 11.274496,
+   "coarse": 213,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 98.41
+  },
+  {
+   "mhz": 1250.001294,
+   "drift": 0.147139,
+   "ts_snr": 68.005096,
+   "coarse": 213,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 257.76
+  },
+  {
+   "mhz": 1183.345519,
+   "drift": -0.01051,
+   "ts_snr": 165.727127,
+   "coarse": 236,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 626.53
+  },
+  {
+   "mhz": 1183.34185,
+   "drift": 0.168159,
+   "ts_snr": 1476.328125,
+   "coarse": 236,
+   "reason": "above-threshold-unmatched",
+   "fs_stat": 5544.93
+  }
+ ]
+}

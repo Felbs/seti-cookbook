@@ -33,6 +33,7 @@ a limit is worth):
 | Barnard's Star keyed carriers | `keying.py` | E1 | — | selftest on real noise; no completeness curve yet |
 | turboSETI recovery rate, UCLA protocol (one scan) | ETAP_RESULT.md | E2 | — | eta_P 3.5 % [3.0, 4.1] over ±8.86 Hz/s at turboSETI SNR 20 (UCLA BL-like control 5.7 %); post-channelisation plants; 16 of 252 2^20-channel slices (256 PFB coarse channels), RFI bands barely sampled |
 | SDSS laser lines, 199 stars | LASER_LINES_RESULT.md | E2 | 1 (3 survivors) | 2 of 3 in telluric bands (post hoc); follow-up needs new spectra |
+| fastsearch vs turboSETI sensitivity | FASTSEARCH_RESULT.md | E2 (method) | — | one coarse channel of GJ699 0003, 6 seeds: 90 % at true SNR 12 vs 65 (0.1 Hz/s) and 62 vs 941 (3.5 Hz/s) against turboSETI SNR 10; 5–20× (5–32× vs turboSETI SNR 5); turboSETI points uncertain up to ~2×; no cadence result yet |
 
 ## Rules
 
