@@ -1,5 +1,12 @@
 # Cross-epoch matching and epoch stacking in the star frame — 2026-11-06
 
+> **Evidence levels:** star-frame stacks **E2** (GJ699 three-scan pseudo-epoch
+> stack: null < ~4.2 Jy ≈ 1.7 GW; GJ725 A three REAL dates: null < ~2.8 Jy ≈
+> 4.1 GW, both for a hydrogen-line beacon in the star's frame); cross-epoch
+> matching: tool validation by injection on real noise (GJ699 pseudo-epochs,
+> GJ725 three real dates) plus a real three-date GJ725 run with 0 survivors in
+> one coarse channel; census: archive metadata (no E-level). See EVIDENCE.md.
+
 > Results below the pre-registration are added after the runs. This section
 > was committed BEFORE any stack was computed on real data.
 
@@ -58,6 +65,37 @@ AGBT16A_999_81, 1501.5 MHz, OFFs named GJ699_OFF) and S band 2016-10-28
 (MJD 57689, AGBT16B_999_55, ABACAD). Its HIP name (HIP87937) has no archive
 rows. So every GJ699 cross-epoch or stacking result here uses PSEUDO-epochs
 (the scans of one session), and says so.
+
+
+**Result (2026-11-06; 854 stars checked: every star targets.json had
+file-checked and found with ≥ 2 same-band dates, every star it had never
+file-checked, and GJ699).** 153 star-band rows, **132 stars with ≥ 2 valid
+same-band fine-res dates; 101 of them with ≥ 2 such dates whose ON scans
+really point at the star** (38 rows fail the pointing check, KNOWN_ISSUES
+#10). All are Green Bank, L or S band, 2016-2018. The nearest usable ones
+(one row per archive name; GJ725 A/B and GJ412 A/B share pointings):
+
+| star | ly | band | dates (pointing ok) | span | total GB | 1 coarse channel/scan, all dates |
+|---|---|---|---|---|---|---|
+| GJ725 | 11.5 | L | 5 | 2016-07-18 … 2017-02-20 (217 d) | 465 | 2.01 |
+| GJ725 | 11.5 | S | 8 | 2016-11-05 … 2017-01-08 (64 d) | 880 | 3.62 |
+| GJ380 | 15.9 | L | 2 | 2016-05-27 … 2016-09-05 (101 d) | 185 | 0.81 |
+| GJ412A | 16.0 | L | 3 | 2016-06-17 … 2016-09-05 (80 d) | 280 | 1.21 |
+| GJ412B | 16.0 | L | 3 | 2016-06-17 … 2016-09-05 (80 d) | 280 | 1.21 |
+| GJ702B | 16.7 | S | 2 | 2016-10-28 … 2016-10-29 (1 d) | 187 | 0.81 |
+| GJ702A | 16.7 | S | 2 | 2016-10-28 … 2016-10-29 (1 d) | 187 | 0.81 |
+| GJ768 | 16.7 | L | 2 | 2016-07-05 … 2016-07-11 (6 d) | 187 | 0.81 |
+| HIP82817 | 20.2 | S | 2 | 2017-04-25 … 2017-09-23 (151 d) | 188 | 0.81 |
+| HIP114622 | 21.3 | L | 8 | 2016-08-22 … 2017-02-20 (182 d) | 747 | 3.22 |
+| HIP72659 | 21.9 | L | 2 | 2016-06-17 … 2016-07-01 (14 d) | 183 | 0.81 |
+| HIP91262 | 25.0 | S | 2 | 2016-12-26 … 2017-02-21 (57 d) | 151 | 0.81 |
+| HIP85295 | 25.2 | L | 2 | 2016-05-04 … 2016-05-05 (1 d) | 187 | 0.81 |
+| HIP101180 | 26.4 | L | 2 | 2016-10-07 … 2017-08-07 (304 d) | 186 | 0.81 |
+
+Not usable although they rank first by distance: GJ65A (8.9 ly; both L-band
+ON sessions point 73' away), GJ866 (11.1 ly; 5.8' off, and SIMBAD RV 6,824.7
+km/s), GJ54.1 (79' off). Fetching ONE coarse channel per scan for every date
+of a star costs 0.8-3.6 GB; whole files are 185-880 GB per star-band.
 
 ## 2. Cross-epoch matching in the star frame (`xepoch.py`)
 
@@ -204,3 +242,103 @@ epochs, the threshold rule or the detection rule):
    2.0-2.1 at low SNR, i.e. MORE than sqrt(3): a max is not linear in the
    signal. Replaced by the 3-bin sum, whose SNR is mean at the plants over the
    spread at 400 empty places; it gives 1.67-1.68 at every level.
+
+**Run 2 — GJ725, three REAL dates, as pre-registered** (`python xepoch.py
+fetch --star GJ725 --days 57587 57667 57804` then `python stack.py real
+--star GJ725`). 18 scans × one 2^20-channel coarse channel (1419.44-1422.37
+MHz, the one holding the star-frame hydrogen line on every date) by HTTP
+range read: 1.21 GB on disk, ~25 min. For RAM, 750,000 channels around the
+predicted line are kept per scan. Star model: GJ725 row 1 of targets.json
+(RV −0.58 km/s; B's RV +1.19 km/s puts B's star-frame line 8.4 kHz away,
+outside this window - this run covers GJ725 A only). Earth's velocity
+toward the star: +0.94, −3.96, +1.59 km/s on the three dates.
+
+Grid 740,573 bins of 2.794 Hz, 0.0 % masked; 342 empty windows, 99th
+percentile 4.96 → threshold **6.00**. Window: stack max z **3.75**; single
+dates 4.25, 3.93, 4.51; OFF-as-ON 3.58. **NULL.** OFF-as-ON control: 1/342
+windows above threshold = **0.29 % per window**.
+
+| true SNR per scan | 3-bin SNR, stack of 3 dates | one date (3 scans) | measured gain | detected, stack | detected, one date |
+|---|---|---|---|---|---|
+| 2 | 3.62 | 1.98 | 1.83 | 12 % | 1 % |
+| 3 | 5.37 | 2.94 | 1.83 | 62 % | 6 % |
+| 4 | 7.13 | 3.90 | 1.83 | **98 %** | 30 % |
+| 5 | 8.88 | 4.85 | 1.83 | 100 % | 52 % |
+| 6 | 10.64 | 5.81 | 1.83 | 100 % | **91 %** |
+| 8-12 | 14.2-21.2 | 7.7-11.6 | 1.83 | 100 % | 100 % |
+
+**Measured gain 1.83 for 3 real dates (ideal sqrt 3 = 1.73).** The same 40
+plant places and the same noise are used at every level, so the levels are
+not independent; the excess over sqrt(3) (+6 %) is within the sampling error
+of 40 plants (not bootstrapped). 90 % detection moves from true SNR 6 per scan
+(one date) to **4 per scan** (three dates), i.e.
+
+> no hydrogen-line beacon held at 1420.405752 MHz in GJ725 A's frame, on
+> during all nine 5-minute ON scans of 2016-07-18, 2016-10-06 and 2017-02-20,
+> brighter than ~2.8 Jy (~4.1 GW EIRP at 11.49 ly), 90 % complete.
+> **Evidence level E2** (planted, smeared, same pipeline, OFF-as-ON control);
+> one frequency convention, ±3 kHz, a beacon steady on all three dates.
+
+## 4. Cross-epoch matching on three REAL dates: GJ725, L band
+
+Same 18 fetched coarse channels as stack run 2 (MJD 57587, 57667, 57804;
+3 ON + 3 OFF each). Earth's velocity toward GJ725 differs by 0.65-5.5 km/s
+between the dates (3-26 kHz at 1.42 GHz), so no pair is degenerate.
+
+**Search** (`python xepoch.py real --star GJ725`, fastsearch threshold 10,
+±1 Hz/s, whole 2.93 MHz coarse channel, ≥ 2 ONs per date, ≥ 2 dates): 35 ON
+hits on the three dates, **all 35 topocentrically vetoed** (the same lines are
+in the OFFs), 0 survivors, 0 groups, 0 expected by chance; chance veto of a
+unique tone 0.2 % per ON hit. A null in one coarse channel of three dates, at
+the matching tolerance and drift rule above.
+
+**Injection through the full chain on the real dates** (`python xepoch.py
+real --star GJ725 --inject`, 750,000 channels per scan around the line): 20
+star-frame tones in all 9 ONs, 10 topocentric tones in all 18 scans, 10 ON-only
+topocentric tones in all 9 ONs; ≥ 2 ONs per date required.
+
+| true SNR per scan | matched on all 3 dates | on ≥ 2 dates | found per ON scan | topocentric groups | ON-only topocentric groups | other PASS |
+|---|---|---|---|---|---|---|
+| 10 | 1/20 | 1/20 | 12/180 | 0 | 0 | 0 |
+| 12 | 1/20 | 1/20 | 34/180 | 0 | 0 | 0 |
+| 15 | 13/20 | 16/20 | 128/180 | 0 | 0 | 0 |
+| 20 | **19/20** | 20/20 | 176/180 | 0 | 0 | 0 |
+| 30 | 20/20 | 20/20 | 180/180 | 0 | 0 | 0 |
+
+All 90 topocentric ON-scan plants (and the 35 real lines) were vetoed at SNR
+≥ 20; the ON-only topocentric tones survived the vetoes and never matched
+across dates. **90 % of star-frame tones are matched on all three real dates
+at true SNR 20 per scan**; the limit is per-scan detection by fastsearch,
+not the matching. Chance veto of a unique tone: 0.4-1.0 % per ON hit
+(planted topocentric tones raise the OFF density).
+
+## What needs the PC (or more disk) next
+
+1. **Full-band cross-epoch searches.** Per date, fastsearch (or turboSETI)
+   over whole files: 3 dates × 6 scans × ~15.5 GB = ~280 GB per GJ725 L-band
+   run; at the measured 11 min per 12.8 GB file with 3 workers, ~4-5 h. Then
+   `python xepoch.py run --target GJ725 DATS... --band 1023.93 1926.27` (seconds).
+2. **More dates.** GJ725 L has 5 dates, S 8; HIP114622 L 8. `xepoch.py fetch
+   --star HIP114622` (one coarse channel per scan, 3.2 GB for all 8 dates).
+3. **GJ725 B.** A second stack run with B's RV (window 8.4 kHz from A's).
+4. **The S-band GJ699 date** has no L-band partner; nothing to do until BL
+   publishes another GJ699 session.
+
+## Not done
+
+- No real multi-date search of GJ699: the archive has one L-band date.
+- Cross-epoch matching on real data covered ONE coarse channel (2.9 MHz) of
+  GJ725 L; the full band needs the PC.
+- The stack's gain was measured with 40 plants and not bootstrapped; the
+  three-date 1.83 vs sqrt(3) = 1.73 excess is assumed to be sampling error.
+- The stack and the matcher test one beacon class: fixed in the star's
+  frame. A transmitter on a planet that does not correct for its own orbit is
+  not tested; the intrinsic-drift grid (±0.05 Hz/s) is only a tolerance.
+- The Sun's gravitational redshift is not modelled (< 0.3 Hz between dates).
+- The OFF-based RFI mask masked 0.0 % in both quiet channels: its behaviour
+  in crowded bands is untested here. The cross-star RFI database
+  (`rfi_db.py`) is not wired in.
+- Tolerances and trials are in the result JSONs, not yet in search_ledger.json
+  (left to avoid merge conflicts with other Step 3 branches).
+- The census made ~2,700 archive queries (849 file lists, 1,872 session windows; the first targets.py build had cached part of them); 2 stars timed out on the first
+  pass and were re-queried; prefix-truncated file lists would undercount.

@@ -935,8 +935,14 @@ def cmd_real(args):
         for p in files:
             x, m = load_npz(p)
             nf = x.shape[1]
-            segs.append(dict(name=p.name, kind=str(m["kind"]), x=np.asarray(x, np.float32), freqs=m["freqs_hz"],
-                             dc=nf // 2 if int(m.get("nfpc", nf)) == nf else None, tstart=float(m["tstart"]),
+            # crop to 750,000 channels around the star-frame HI line: 18 full coarse channels do not fit in RAM
+            tm = float(m["tstart"]) + x.shape[0] * float(m["tsamp"]) / 2 / 86400
+            c = int(np.argmin(np.abs(m["freqs_hz"] - F_HI / frame(star, [tm])[0][0])))
+            a = int(np.clip(c - 375_000, 0, max(0, nf - 750_000)))
+            dc = nf // 2 if int(m.get("nfpc", nf)) == nf else None
+            dc = dc - a if dc is not None and a <= dc < a + 750_000 else None
+            segs.append(dict(name=p.name, kind=str(m["kind"]), x=np.ascontiguousarray(x[:, a:a + 750_000], np.float32),
+                             freqs=m["freqs_hz"][a:a + 750_000], dc=dc, tstart=float(m["tstart"]),
                              tstart_label=float(m["tstart"]), tsamp=float(m["tsamp"]), foff=float(m["foff"]) * 1e6,
                              t_mid_label=float(m["tstart"]) + x.shape[0] * float(m["tsamp"]) / 2 / 86400))
         print(f"{args.star}: {len(segs)} real scans, injection through the full chain")

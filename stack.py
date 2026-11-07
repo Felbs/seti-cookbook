@@ -96,7 +96,7 @@ def prep_scan(x, freqs_hz, tsamp, t_mid, star, drifts=None, dc_idx=(), site=None
     foff = float(freqs_hz[1] - freqs_hz[0])
     fc = float(np.mean(freqs_hz))
     earth = fc * a / C
-    z = robust(dedrift(xn, [earth + d / K for d in drifts], foff, tsamp)).astype(np.float32)
+    z = robust(dedrift(xn, [earth + d / K for d in drifts], foff, tsamp)).astype(np.float16)   # halves RAM
     for c in dc_idx:
         z[:, max(0, c - 1):c + 2] = np.nan
     pad = int(np.ceil(abs(earth + max(abs(d) for d in drifts)) * x.shape[0] * tsamp / abs(foff))) + 1
@@ -130,7 +130,7 @@ def to_grid(prep, grid, mask=None):
     bad = np.isnan(z).any(axis=0)
     if mask is not None:
         bad |= mask
-    zz = np.nan_to_num(z, nan=0.0)
+    zz = np.nan_to_num(z.astype(np.float32), nan=0.0)
     out = np.empty((z.shape[0], grid.size), dtype=np.float32)
     for i in range(z.shape[0]):
         out[i] = np.interp(grid, f, zz[i], left=np.nan, right=np.nan)
@@ -244,20 +244,27 @@ def measure(load_scans, star, epochs_def, prereg_window, levels, n_plants=40, se
     scans = load_scans()
     half = PREREG["window_half_hz"]
 
+    base = {}                         # preps of the UNPLANTED scans, made once
+
     def build(scs, plants=None, as_on="ON"):
         preps = {}
         for s in scs:
-            x = s["x"]
             if plants and s["kind"] == as_on:
-                x = x.astype(np.float32, copy=True)
+                x = s["x"].astype(np.float32, copy=True)
                 pl = []
                 for f_s in plants["f_star"]:
                     ch, dr = X.plant_track(star, s["t_mid"], None, s["tsamp"], x.shape[0], s["freqs_hz"], f_s,
                                            site=site)
                     pl.append(dict(ch=ch, drift=dr, snr=plants["snr"]))
                 inject.plant(x, s["freqs_hz"][1] - s["freqs_hz"][0], s["tsamp"], pl)
-            preps[s["name"]] = prep_scan(x, s["freqs_hz"], s["tsamp"], s["t_mid"], star,
-                                         dc_idx=[s["dc"]] if s.get("dc") is not None else (), site=site)
+                preps[s["name"]] = prep_scan(x, s["freqs_hz"], s["tsamp"], s["t_mid"], star,
+                                             dc_idx=[s["dc"]] if s.get("dc") is not None else (), site=site)
+                del x
+            else:
+                if s["name"] not in base:
+                    base[s["name"]] = prep_scan(s["x"], s["freqs_hz"], s["tsamp"], s["t_mid"], star,
+                                                dc_idx=[s["dc"]] if s.get("dc") is not None else (), site=site)
+                preps[s["name"]] = base[s["name"]]
         ep = []
         other = "OFF" if as_on == "ON" else "ON"
         for e in epochs_def:
@@ -292,6 +299,10 @@ def measure(load_scans, star, epochs_def, prereg_window, levels, n_plants=40, se
     okf = np.isfinite(null_off)
     far = float(np.mean(null_off[okf] >= thr))
     w_off = window_stat(so["stack"], so["grid"], centre, half)
+    del so, ep_off
+    for s in scans:                   # the OFFs' raw data are no longer needed (masks are in `base`)
+        if s["kind"] != "ON":
+            s["x"] = None
     print(f"  window {centre/1e6:.6f} MHz +-{half/1e3:.1f} kHz: stack max z {w_stack:.2f} (thr {thr:.2f}); "
           f"single epochs {', '.join(f'{v:.2f}' for v in w_single)}; OFF-as-ON {w_off:.2f}")
     print(f"  OFF-as-ON control: {int((null_off[okf] >= thr).sum())}/{int(okf.sum())} windows above threshold "
@@ -361,20 +372,29 @@ def gj699_scans():
     return out
 
 
-def real_scans(token):
+def real_scans(token, nch=750_000):
+    """Fetched coarse channels of real dates; each cropped to `nch` channels around
+    the star-frame hydrogen line (RAM: 18 full 2^20-channel scans do not fit)."""
     import xepoch as X
     files = sorted((DATA / f"xepoch_{token}").glob("*.npz"))
     if not files:
         raise SystemExit(f"nothing in data/xepoch_{token}: run `xepoch.py fetch --star {token}` first")
+    star_for_crop = X.Star.from_targets(token)
     scans = [X.make_scan(p.name, "?", 0, 1, 1, 1, [], [], []) for p in files]
     out = []
     for p in files:
         d, m = X.load_npz(p)
         nt, nf = d.shape
-        out.append(dict(name=p.name, kind=str(m["kind"]), x=np.asarray(d, np.float32), freqs_hz=m["freqs_hz"],
-                        tsamp=float(m["tsamp"]), tstart=float(m["tstart"]),
-                        t_mid=float(m["tstart"]) + nt * float(m["tsamp"]) / 2 / 86400,
-                        dc=nf // 2 if int(m.get("nfpc", nf)) == nf else None))
+        t_mid = float(m["tstart"]) + nt * float(m["tsamp"]) / 2 / 86400
+        fr = m["freqs_hz"]
+        c = int(np.argmin(np.abs(fr - F_HI / X.frame(star_for_crop, [t_mid])[0][0])))
+        a = int(np.clip(c - nch // 2, 0, max(0, nf - nch)))
+        dc = nf // 2 if int(m.get("nfpc", nf)) == nf else None
+        dc = dc - a if dc is not None and a <= dc < a + nch else None
+        out.append(dict(name=p.name, kind=str(m["kind"]), x=np.ascontiguousarray(d[:, a:a + nch], np.float32),
+                        freqs_hz=fr[a:a + nch], tsamp=float(m["tsamp"]), tstart=float(m["tstart"]),
+                        t_mid=t_mid, dc=dc))
+        del d
     for s, sc in zip(out, scans):
         sc["t_mid"], sc["tstart"] = s["t_mid"], s["tstart"]
     X.group_epochs(scans)

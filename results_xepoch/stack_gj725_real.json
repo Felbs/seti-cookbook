@@ -1,0 +1,131 @@
+{
+ "label": "GJ725, 3 real dates",
+ "prereg": {
+  "drifts_hz_s": [
+   -0.05,
+   -0.04,
+   -0.03,
+   -0.02,
+   -0.01,
+   0.0,
+   0.01,
+   0.02,
+   0.03,
+   0.04,
+   0.05
+  ],
+  "window_half_hz": 3000.0,
+  "z_floor": 6.0,
+  "null_percentile": 99.0,
+  "n_null_min": 300,
+  "mask_z": 6.0,
+  "mask_pad": 3
+ },
+ "window_centre_mhz": 1420.4057517679998,
+ "epochs": [
+  "MJD57587",
+  "MJD57667",
+  "MJD57804"
+ ],
+ "epoch_coverage_mhz": [
+  [
+   "MJD57587",
+   1419.426481574571,
+   1421.521861642664
+  ],
+  [
+   "MJD57667",
+   1419.4496625423799,
+   1421.5450716089617
+  ],
+  [
+   "MJD57804",
+   1419.423410129729,
+   1421.5187865006717
+  ]
+ ],
+ "masked_fraction": 0.0,
+ "threshold": 6.0,
+ "threshold_single_epoch": 6.0,
+ "n_null": 342,
+ "null_p99": 4.96090534210205,
+ "window_stack": 3.7539258003234863,
+ "window_single": [
+  4.24779748916626,
+  3.933910846710205,
+  4.512602806091309
+ ],
+ "window_off_as_on": 3.58148455619812,
+ "off_as_on_false_alarm": 0.0029239766081871343,
+ "off_as_on_n": 342,
+ "levels": {
+  "2": {
+   "box_snr_stack": 3.6178831849316504,
+   "box_snr_single_epoch": 1.9777586880262137,
+   "gain": 1.8292844353737954,
+   "detect_stack": 0.125,
+   "detect_single_epoch": 0.008333333333333333,
+   "n": 40
+  },
+  "3": {
+   "box_snr_stack": 5.372331138855758,
+   "box_snr_single_epoch": 2.935811739631804,
+   "gain": 1.8299303958534927,
+   "detect_stack": 0.625,
+   "detect_single_epoch": 0.058333333333333334,
+   "n": 40
+  },
+  "4": {
+   "box_snr_stack": 7.126878432976489,
+   "box_snr_single_epoch": 3.8951369804316256,
+   "gain": 1.8296862135479377,
+   "detect_stack": 0.975,
+   "detect_single_epoch": 0.3,
+   "n": 40
+  },
+  "5": {
+   "box_snr_stack": 8.88294423675678,
+   "box_snr_single_epoch": 4.854102625270686,
+   "gain": 1.829986904378938,
+   "detect_stack": 1.0,
+   "detect_single_epoch": 0.525,
+   "n": 40
+  },
+  "6": {
+   "box_snr_stack": 10.639182374831584,
+   "box_snr_single_epoch": 5.814558745092235,
+   "gain": 1.829748884008019,
+   "detect_stack": 1.0,
+   "detect_single_epoch": 0.9083333333333333,
+   "n": 40
+  },
+  "8": {
+   "box_snr_stack": 14.155549720664247,
+   "box_snr_single_epoch": 7.734689490590428,
+   "gain": 1.83013807314244,
+   "detect_stack": 1.0,
+   "detect_single_epoch": 1.0,
+   "n": 40
+  },
+  "10": {
+   "box_snr_stack": 17.670994589863472,
+   "box_snr_single_epoch": 9.6554625050065,
+   "gain": 1.8301551666427993,
+   "detect_stack": 1.0,
+   "detect_single_epoch": 1.0,
+   "n": 40
+  },
+  "12": {
+   "box_snr_stack": 21.18907750163066,
+   "box_snr_single_epoch": 11.578467640263526,
+   "gain": 1.830041604810185,
+   "detect_stack": 1.0,
+   "detect_single_epoch": 1.0,
+   "n": 40
+  }
+ },
+ "snr90_stack": 4.0,
+ "snr90_single_epoch": 6.0,
+ "verdict": "NULL - nothing above the pre-registered threshold",
+ "plants": 40
+}

@@ -36,6 +36,11 @@ a limit is worth):
 | SDSS laser lines, 199 stars | LASER_LINES_RESULT.md | E2 | 1 (3 survivors) | 2 of 3 in telluric bands (post hoc); follow-up needs new spectra |
 | fastsearch vs turboSETI sensitivity | FASTSEARCH_RESULT.md | E2 (method) | — | one coarse channel of GJ699 0003, 6 seeds: 90 % at true SNR 12 vs 65 (0.1 Hz/s) and 62 vs 941 (3.5 Hz/s) against turboSETI SNR 10; 5–20× (5–32× vs turboSETI SNR 5); turboSETI points uncertain up to ~2×; no cadence result yet |
 | Cross-star RFI database (veto) | RFI_DB_RESULT.md, `rfi_db.py` | tool validation | — | full DB (PC, 1.8 GB RAM): 40.7 % of 1,029 GJ699 filter-2 rows explained by other stars (seed-only default: 0.9 %); false veto 0/164 in place, 0.34 % band-wide; blc1 relatives present (known-answer) but not significant by its own chance test, 0/5 flagged |
+| Multi-epoch census (≥ 2 same-band fine-res dates) | EPOCH_CENSUS.csv, `tools/epoch_census.py` | metadata | — | archive metadata only; GJ699 has ONE L-band date; ON pointings checked against the star's propagated position |
+| Cross-epoch star-frame matching, GJ699 PSEUDO-epochs | XEPOCH_RESULT.md §2, `xepoch.py inject` | tool validation (E2-style) | — | one real session relabelled +0/+200/+400 d; 90 % matched on all 3 at true SNR 20/scan; topocentric tones 0 groups; not a multi-date search |
+| Barnard's Star hydrogen-line beacon, 3-scan star-frame stack | XEPOCH_RESULT.md §3, `stack.py gj699` | **E2** | — | null < ~4.2 Jy ≈ 1.7 GW for a beacon steady through the 3 ONs of 2016-03-10; measured gain 1.67 (sqrt 3 = 1.73); OFF-as-ON false alarms 0.28 %/window; pseudo-epochs, ONE date |
+| GJ725 A hydrogen-line beacon, 3-date star-frame stack (2016-07-18, 2016-10-06, 2017-02-20) | XEPOCH_RESULT.md §3, `stack.py real --star GJ725` | **E2** | — | null < ~2.8 Jy ≈ 4.1 GW, beacon on all 9 ON scans; measured gain 1.83 (sqrt 3 = 1.73, 40 plants); 90 % at true SNR 4/scan vs 6 for one date; OFF-as-ON 0.29 %/window; ±3 kHz, GJ725 B not covered |
+| GJ725 cross-epoch star-frame matching, 3 real dates, one coarse channel | XEPOCH_RESULT.md §4, `xepoch.py real` | E2 (one coarse channel) | — | 35 ON hits, all topocentrically vetoed, 0 groups; injection through the chain: 19/20 matched on all 3 dates at true SNR 20/scan, 0 topocentric groups |
 
 ## Rules
 

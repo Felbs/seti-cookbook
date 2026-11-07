@@ -1,0 +1,164 @@
+{
+ "kind": "GJ725: real dates",
+ "n_epochs": 3,
+ "min_ons": 2,
+ "files": [
+  "spliced_blc0001020304050607_guppi_57587_20645_Gj725_0015.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57587_20979_Hip90833_0016.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57587_21314_Gj725_0017.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57587_21650_Hip90998_0018.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57587_21987_Gj725_0019.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57587_22324_Hip91203_0020.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57667_81672_GJ725_0003.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57667_82006_HIP91258_0004.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57667_82339_GJ725_0005.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57667_82675_HIP91315_0006.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57667_83011_GJ725_0007.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57667_83341_HIP91391_0008.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57804_50991_GJ725_0008.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57804_51331_HIP91052_0009.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57804_51671_GJ725_0010.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57804_52017_HIP91065_0011.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57804_52364_GJ725_0012.gpuspec.0000.npz",
+  "spliced_blc0001020304050607_guppi_57804_52693_HIP91136_0013.gpuspec.0000.npz"
+ ],
+ "null": {
+  "groups": 0,
+  "n_pass": 0,
+  "expected": {
+   "expected_chance_groups": {
+    "2": 0.0,
+    "3": 0.0
+   },
+   "shift_test": null,
+   "drift_pair_survival": null,
+   "expected_after_drift": {
+    "2": null,
+    "3": null
+   }
+  },
+  "counts": {
+   "on_hits": 35,
+   "topo_vetoed": 35,
+   "star_off_vetoed": 0,
+   "outside_coverage": 0,
+   "survivors": 0,
+   "chance_veto_per_on_hit": 0.0025555555555555557
+  }
+ },
+ "n_star": 20,
+ "n_topo": 10,
+ "n_ononly": 10,
+ "levels": {
+  "10": {
+   "recovered_all": 1,
+   "recovered_any": 1,
+   "of": 20,
+   "found_per_on_scan": 12,
+   "of_on": 180,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 75,
+    "topo_vetoed": 47,
+    "star_off_vetoed": 0,
+    "outside_coverage": 0,
+    "survivors": 28,
+    "chance_veto_per_on_hit": 0.0041111111111111105
+   },
+   "expected": {
+    "2": 2.899763866289951e-05,
+    "3": 1.3959863496544942e-10
+   }
+  },
+  "12": {
+   "recovered_all": 1,
+   "recovered_any": 1,
+   "of": 20,
+   "found_per_on_scan": 34,
+   "of_on": 180,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 166,
+    "topo_vetoed": 78,
+    "star_off_vetoed": 0,
+    "outside_coverage": 0,
+    "survivors": 88,
+    "chance_veto_per_on_hit": 0.007722222222222223
+   },
+   "expected": {
+    "2": 6.766106308558714e-05,
+    "3": 4.187959048963482e-10
+   }
+  },
+  "15": {
+   "recovered_all": 13,
+   "recovered_any": 16,
+   "of": 20,
+   "found_per_on_scan": 128,
+   "of_on": 180,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 326,
+    "topo_vetoed": 123,
+    "star_off_vetoed": 0,
+    "outside_coverage": 0,
+    "survivors": 203,
+    "chance_veto_per_on_hit": 0.010388888888888887
+   },
+   "expected": {
+    "2": 0.007103917795882603,
+    "3": 5.33964778742844e-07
+   }
+  },
+  "20": {
+   "recovered_all": 19,
+   "recovered_any": 20,
+   "of": 20,
+   "found_per_on_scan": 176,
+   "of_on": 180,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 391,
+    "topo_vetoed": 125,
+    "star_off_vetoed": 0,
+    "outside_coverage": 0,
+    "survivors": 266,
+    "chance_veto_per_on_hit": 0.010388888888888887
+   },
+   "expected": {
+    "2": 0.011211405426371323,
+    "3": 1.0609496257374157e-06
+   }
+  },
+  "30": {
+   "recovered_all": 20,
+   "recovered_any": 20,
+   "of": 20,
+   "found_per_on_scan": 180,
+   "of_on": 180,
+   "topo_groups": 0,
+   "ononly_groups": 0,
+   "other_pass": 0,
+   "counts": {
+    "on_hits": 395,
+    "topo_vetoed": 125,
+    "star_off_vetoed": 0,
+    "outside_coverage": 0,
+    "survivors": 270,
+    "chance_veto_per_on_hit": 0.010277777777777776
+   },
+   "expected": {
+    "2": 0.011597986207726533,
+    "3": 1.1167890797235952e-06
+   }
+  }
+ }
+}
